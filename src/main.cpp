@@ -27,6 +27,7 @@
 #include "ADC_DMA.h"
 #include "Debug_log.h"
 #include "th_sensor.h"
+#include "bmcu_link.h"
 #include <string.h>
 
 /* 系统 RGB LED 实例（1 颗，PD1 引脚） */
@@ -62,6 +63,7 @@ void RGB_init()
  */
 void RGB_update()
 {
+    bmcu_link_apply_led_override();
     /* 检查是否有任何 LED 需要更新 */
     if (!(SYS_RGB.is_dirty() ||
           RGBOUT[0].is_dirty() || RGBOUT[1].is_dirty() ||
@@ -69,6 +71,7 @@ void RGB_update()
         return;
 
     static uint32_t last = 0u;
+    static uint8_t next_strip = 0u;
 
     /* 最小刷新间隔为 1ms */
     uint32_t min_gap = time_hw_tpms;
@@ -78,14 +81,31 @@ void RGB_update()
     if (last != 0u && (uint32_t)(now - last) < min_gap)
         return;
 
-    last = now;
+    /* 轮询更新：每轮次只更新一个脏 LED，减少单次循环耗时 */
+    for (uint8_t attempt = 0u; attempt < 5u; ++attempt)
+    {
+        const uint8_t strip = next_strip;
+        if (++next_strip >= 5u) next_strip = 0u;
 
-    /* 逐个更新 LED 控制器 */
-    SYS_RGB.updata();
-    RGBOUT[0].updata();
-    RGBOUT[1].updata();
-    RGBOUT[2].updata();
-    RGBOUT[3].updata();
+        switch (strip)
+        {
+        case 0u:
+            if (SYS_RGB.is_dirty()) { SYS_RGB.updata(); last = now; return; }
+            break;
+        case 1u:
+            if (RGBOUT[0].is_dirty()) { RGBOUT[0].updata(); last = now; return; }
+            break;
+        case 2u:
+            if (RGBOUT[1].is_dirty()) { RGBOUT[1].updata(); last = now; return; }
+            break;
+        case 3u:
+            if (RGBOUT[2].is_dirty()) { RGBOUT[2].updata(); last = now; return; }
+            break;
+        default:
+            if (RGBOUT[3].is_dirty()) { RGBOUT[3].updata(); last = now; return; }
+            break;
+        }
+    }
 }
 
 /* ========== 耗材数据 Flash 存储管理 ========== */
@@ -286,6 +306,27 @@ void ams_datas_save_run()
 }
 
 /**
+ * @brief 限速持久化保存
+ *
+ * 仅在总线空闲 5ms 以上且距上次保存至少 10ms 时执行。
+ * 优先保存加载状态，再保存耗材数据。
+ */
+static void persistence_save_run()
+{
+    if (!g_state_dirty && !g_fil_dirty) return;
+    if (!bus_port_to_host.quiet_for_us(5000u)) return;
+
+    static uint32_t last_save_tick = 0u;
+    const uint32_t now = time_ticks32();
+    const uint32_t min_gap = time_hw_tpms * 10u;
+    if (last_save_tick != 0u && static_cast<uint32_t>(now - last_save_tick) < min_gap) return;
+
+    if (g_state_dirty) ams_state_save_run();
+    else ams_datas_save_run();
+    last_save_tick = time_ticks32();
+}
+
+/**
  * @brief 温湿度传感器更新到所有耗材槽位
  *
  * 读取一次温湿度传感器数据，然后将结果写入当前 AMS
@@ -358,6 +399,9 @@ int main(void)
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
     /* PD0/PD1 重映射为普通 GPIO（用于 AS5600 编码器 SDA 通道 0） */
     GPIO_PinRemapConfig(GPIO_Remap_PD01, ENABLE);
+
+    /* 初始化诊断串口（USART3，用于 bmcu_link 伴侣协议） */
+    bmcu_link_init();
 
     /* 初始化 RGB LED 硬件 */
     RGB_init();
@@ -447,10 +491,6 @@ int main(void)
                 /* 收到 AHUB 心跳：标记为 AHUB 设备 */
                 if (ahub_stu == ahubus_package_type::heartbeat)
                     bus_host_device_type = host_device_type_ahub;
-
-                /* 周期性保存耗材数据和加载状态到 Flash */
-                ams_datas_save_run();
-                ams_state_save_run();
             }
             else
             {
@@ -462,8 +502,14 @@ int main(void)
 
         /* 运动控制：PID 调节、送料/退料动作、LED 状态更新 */
         Motion_control_run(error);
+        /* 通知诊断链路当前错误状态 */
+        bmcu_link_set_control_error(error);
+        /* 运行诊断链路服务（收发、日志、软复位） */
+        bmcu_link_service();
         /* 更新 RGB LED 显示 */
         RGB_update();
+        /* 限速持久化保存（仅在总线空闲时写入 Flash） */
+        if (!bmcu_link_reset_pending()) persistence_save_run();
 
         /* 每 5 秒读取一次温湿度数据并更新到耗材结构体 */
         static uint32_t last_th_ms = 0;
@@ -472,6 +518,14 @@ int main(void)
         {
             last_th_ms = now_ms;
             th_sensor_update_filament();
+        }
+
+        /* 每30秒重新检测传感器类型（支持热插拔和更换传感器） */
+        static uint32_t last_th_detect_ms = 0u;
+        if ((now_ms - last_th_detect_ms) >= 30000u)
+        {
+            last_th_detect_ms = now_ms;
+            th_sensor_init();
         }
     }
 }

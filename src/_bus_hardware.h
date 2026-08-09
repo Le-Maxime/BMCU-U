@@ -1,6 +1,51 @@
 #pragma once
 #include "crc_bus.h"
+#include "hal/time_hw.h"
 #include <string.h>
+
+struct bus_rx_metrics
+{
+    volatile uint32_t rx_bytes;
+    volatile uint32_t rx_frames_valid;
+    volatile uint32_t rx_bad_length;
+    volatile uint32_t rx_header_crc_error;
+    volatile uint32_t rx_resync_bytes;
+    volatile uint32_t rx_publish_drop;
+    volatile uint32_t rx_dma_error;
+    volatile uint32_t rx_usart_overrun;
+    volatile uint32_t rx_dma_overrun;
+    volatile uint32_t rx_dma_wrap;
+    volatile uint32_t rx_dma_max_pending;
+    volatile uint32_t rx_compat_copy;
+};
+
+enum class bus_tx_fault : uint8_t
+{
+    response_busy,
+    response_missing,
+    no_response_expected,
+    invalid_length,
+    dma_error,
+    timeout,
+};
+
+struct bus_tx_metrics
+{
+    volatile uint32_t tx_started;
+    volatile uint32_t tx_completed;
+    volatile uint32_t tx_response_busy;
+    volatile uint32_t tx_response_missing;
+    volatile uint32_t tx_no_response_expected;
+    volatile uint32_t tx_invalid_length;
+    volatile uint32_t tx_dma_error;
+    volatile uint32_t tx_timeout;
+};
+
+bool bus_uart1_rx_transport_quiet();
+bool bus_uart1_reset_transport_quiescent();
+void bus_uart1_rx_poll();
+void bus_uart1_rx_release_frame();
+void bus_uart1_tx_poll();
 
 /**
  * @brief 总线数据类型枚举
@@ -69,11 +114,62 @@ private:
     void (*port_send_datas)(uint8_t *data, uint16_t len); /**< 发送函数指针（指向 DMA 发送函数） */
 
 public:
+    bus_rx_metrics rx_metrics = {};
+    bus_tx_metrics tx_metrics = {};
     uint8_t * volatile bus_recv_data_ptr = recv_data_buf[0]; /**< 主循环读取的接收缓冲区指针（volatile，ISR 可修改） */
     volatile int recv_data_len = 0;       /**< 主循环可读取的接收数据长度（0=无数据） */
     volatile int send_data_len = 0;       /**< 待发送的数据长度（0=无数据，非0时触发发送） */
     volatile _bus_data_type bus_package_type = _bus_data_type::none; /**< 主循环可读取的数据包类型 */
     volatile bool idle = true;            /**< 总线空闲标志（true=可发送，false=正在发送） */
+    volatile uint32_t last_activity_tick = 0u;
+
+    inline __attribute__((always_inline)) void note_activity()
+    {
+        last_activity_tick = time_ticks32();
+    }
+
+    inline __attribute__((always_inline)) void report_tx_fault(bus_tx_fault fault)
+    {
+        volatile uint32_t *counter = nullptr;
+        switch (fault)
+        {
+        case bus_tx_fault::response_busy: counter = &tx_metrics.tx_response_busy; break;
+        case bus_tx_fault::response_missing: counter = &tx_metrics.tx_response_missing; break;
+        case bus_tx_fault::no_response_expected: counter = &tx_metrics.tx_no_response_expected; break;
+        case bus_tx_fault::invalid_length: counter = &tx_metrics.tx_invalid_length; break;
+        case bus_tx_fault::dma_error: counter = &tx_metrics.tx_dma_error; break;
+        case bus_tx_fault::timeout: counter = &tx_metrics.tx_timeout; break;
+        }
+        if (counter != nullptr && *counter != 0xFFFFFFFFu) ++*counter;
+    }
+
+    inline __attribute__((always_inline)) bool quiet_for_us(uint32_t microseconds) const
+    {
+        if (!idle || send_data_len != 0 || recv_data_len != 0) return false;
+        if (_index != 0 || drop_bytes != 0) return false;
+        if (!bus_uart1_reset_transport_quiescent()) return false;
+        return static_cast<uint32_t>(time_ticks32() - last_activity_tick) >=
+               microseconds * time_hw_tpus;
+    }
+
+private:
+    uint32_t send_not_before_tick = 0u;
+    bool send_deferred = false;
+
+    inline __attribute__((always_inline)) bool send_is_ready()
+    {
+        if (!send_deferred) return true;
+        if (time_diff32(time_ticks32(), send_not_before_tick) < 0) return false;
+        send_deferred = false;
+        return true;
+    }
+
+public:
+    inline __attribute__((always_inline)) void defer_send_us(uint32_t microseconds)
+    {
+        send_not_before_tick = time_ticks32() + microseconds * time_hw_tpus;
+        send_deferred = true;
+    }
 
     /**
      * @brief 获取当前发送构建缓冲区指针
@@ -108,10 +204,30 @@ public:
         drop_bytes = 0;
         bus_recv_data_ptr = recv_data_buf[1]; // 主循环使用缓冲区 1
         idle = true;
+        last_activity_tick = time_ticks32();
+        send_deferred = false;
         send_data_len = 0;
         recv_data_len = 0;
         tx_build_sel  = 0;
+        memset((void *)&rx_metrics, 0, sizeof(rx_metrics));
+        memset((void *)&tx_metrics, 0, sizeof(tx_metrics));
         port_send_datas = _port_send_datas;
+    }
+
+    void reset_rx_parser()
+    {
+        _index = 0;
+        length = 999;
+        data_length_index = 0;
+        data_CRC8_index = 0;
+        irq_package_type = _bus_data_type::none;
+        drop_bytes = 0;
+    }
+
+    void release_recv_frame()
+    {
+        recv_data_len = 0;
+        bus_package_type = _bus_data_type::none;
     }
 
     /**
@@ -150,6 +266,8 @@ public:
      */
     void irq(uint8_t data)
     {
+        note_activity();
+        if (rx_metrics.rx_bytes != 0xFFFFFFFFu) ++rx_metrics.rx_bytes;
         // 如果有需要丢弃的字节（心跳包快速处理后的剩余数据）
         if (drop_bytes > 0)
         {
@@ -171,6 +289,10 @@ public:
                 length = data_CRC8_index = 6; // 默认 CRC8 偏移
                 _index = 1;
                 irq_package_type = (_bus_data_type)data; // 记录协议类型
+            }
+            else if (rx_metrics.rx_resync_bytes != 0xFFFFFFFFu)
+            {
+                ++rx_metrics.rx_resync_bytes;
             }
             return;
         }
@@ -220,6 +342,7 @@ public:
             // 长度有效性检查
             if (length <= (int)data_CRC8_index || length > BUF_SZ)
             {
+                if (rx_metrics.rx_bad_length != 0xFFFFFFFFu) ++rx_metrics.rx_bad_length;
                 _index = 0; // 长度无效，丢弃
                 return;
             }
@@ -230,6 +353,8 @@ public:
         {
             if (data != bus_crc8(buf, (uint32_t)data_CRC8_index))
             {
+                if (rx_metrics.rx_header_crc_error != 0xFFFFFFFFu)
+                    ++rx_metrics.rx_header_crc_error;
                 _index = 0; // CRC8 校验失败，丢弃
                 return;
             }
@@ -263,6 +388,7 @@ public:
         if (idx >= length)
         {
             _index = 0;
+            if (rx_metrics.rx_frames_valid != 0xFFFFFFFFu) ++rx_metrics.rx_frames_valid;
 
             // 只有当主循环尚未读取上一个包时才更新（避免覆盖）
             if (recv_data_len == 0)
@@ -273,6 +399,10 @@ public:
                 bus_irq_data_ptr = tmp;               // ISR 继续写入另一个缓冲区
                 bus_package_type = irq_package_type;
                 recv_data_len = length;
+            }
+            else if (rx_metrics.rx_publish_drop != 0xFFFFFFFFu)
+            {
+                ++rx_metrics.rx_publish_drop;
             }
             return;
         }
@@ -294,15 +424,21 @@ public:
     void send_package()
     {
         const int len = send_data_len;
-        if (len > 0 && len <= 1280)
+        if (len == 0) return;
+        if (len < 0 || len > 1280)
         {
-            if (!idle) return; // 总线正在发送，等待
+            report_tx_fault(bus_tx_fault::invalid_length);
+            send_data_len = 0;
+            return;
+        }
+        {
+            if (!idle || !send_is_ready()) return;
 
             uint8_t *tx = tx_build_buf();
-            tx_build_sel ^= 1; // 切换缓冲区（下次构建使用另一个）
+            tx_build_sel ^= 1;
 
-            port_send_datas(tx, (uint16_t)len); // 启动 DMA 发送
-            send_data_len = 0; // 清空标志
+            port_send_datas(tx, (uint16_t)len);
+            send_data_len = 0;
         }
     }
 

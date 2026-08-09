@@ -234,6 +234,25 @@ https://www.youtube.com/watch?v=Hn_DNzSmhuc
 
 # 更新日志
 
+## V10.5.4
+
+### 用户可见变更
+- **温湿度传感器热插拔支持**：运行中更换传感器后 30 秒内自动重新检测，无需重启。
+- **在线检测策略引擎重写**：采用纯逻辑状态机替代硬编码流程，行为更可预测、更易维护。
+- **AMS 服务观测模块**：新增无副作用的遥测系统，记录打印机帧间隔和注册握手指标，便于诊断 HMS 0500_409D 问题。
+
+### 技术变更
+- 合入 kaizou 分支的在线检测策略引擎（`ams_online_detect_policy.h`），心跳超时后自动重新注册。
+- 新增 AMS 服务观测头文件（`bmcu_ams_service_watch.h`），仅用于遥测，不参与总线决策。
+- 新增软复位策略评估模块（`bmcu_soft_reset_policy.h`）。
+- 新增总线事务结果分类器（`printer_bus_result.h`）。
+- 新增 UART 帧解析器（`printer_rx_framer`），已从构建中排除（未使用）。
+- Motion_control 新增遥测接口：渠道状态查询、复位安全评估、耗材米数统计。
+- 总线硬件层新增 RX/TX 指标追踪、空闲检测（`quiet_for_us`）、发送延迟（`defer_send_us`）。
+- `bmcu_link` 诊断伴侣协议已合入但默认禁用（`BMCU_LINK_ENABLED=0`），需 USART3 硬件。
+- 移除 `build_src_filter` 中未使用的 `printer_rx_framer.cpp`。
+- Flash 占用 89%（标准模式），留有充足余量。
+
 ## V10.5.2
 
 ### 用户可见变更

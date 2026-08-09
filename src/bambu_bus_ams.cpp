@@ -6,6 +6,8 @@
 #include "app_api.h"
 #include "_bus_hardware.h"
 #include "crc_bus.h"
+#include "ams_online_detect_policy.h"
+#include "bmcu_link.h"
 
 /**
  * @brief AMS 编号到索引的映射表
@@ -166,12 +168,13 @@ void bambubus_long_package_analysis(uint8_t *buf, int data_length, bambubus_long
 /** @brief 打印机发来的长帧数据包全局解析结果 */
 bambubus_long_packge_data printer_data_long;
 
-/** @brief 当前在线检测前缀值（0x0C 或 0x0A） */
+/** @brief 在线检测策略引擎状态 */
+static ams_online_detect::State g_online_detect_state = {};
+static const ams_online_detect::Config g_online_detect_config = {
+    .confirm_settle_ticks = 3000u * time_hw_tpms,
+    .service_silence_ticks = 1500u * time_hw_tpms,
+};
 static uint8_t online_detect_prefix_now = 0x0Cu;
-/** @brief 标记 AMS 是否已成功注册到打印机 */
-static bool have_registered = false;
-/** @brief 在线检测阶段（0=初始，1=第一次检测，2=重复检测，3=已注册） */
-static uint8_t online_detect_phase = 0u;
 
 /**
  * @brief 重置在线检测状态
@@ -181,9 +184,9 @@ static uint8_t online_detect_phase = 0u;
  */
 static inline void online_detect_reset(void)
 {
-    have_registered = false;
+    ams_online_detect::reset(g_online_detect_state);
     online_detect_prefix_now = 0x0Cu;
-    online_detect_phase = 0u;
+    bmcu_link_ams_registration_reset();
 }
 
 /**
@@ -775,6 +778,8 @@ void get_package_motion(bambubus_printer_motion_package_struct *package_recv)
     const uint8_t ams_idx = bambubus_ams_map[fixed_ams_num];
     if (!ams[ams_idx].online) return; // AMS 未在线
 
+    bmcu_link_ams_service_frame(0u); // kServiceMotion
+
     _ams *ams_ptr = &ams[ams_idx];
     if (!set_motion(in.filamnet_channel, in.statu_flag, in.motion_flag, fixed_ams_num)) return;
 
@@ -996,6 +1001,8 @@ void get_package_stu_motion(bambubus_printer_stu_motion_package_struct *package_
     const uint8_t ams_idx = bambubus_ams_map[fixed_ams_num];
     if (!ams[ams_idx].online) return;
 
+    bmcu_link_ams_service_frame(1u); // kServiceStuMotion
+
     _ams *ams_ptr = &ams[ams_idx];
 
     // 统计各通道的在线状态
@@ -1139,20 +1146,18 @@ void get_package_online_detect(unsigned char *buf, int length)
         return;
     }
 
+    bmcu_link_ams_registration_query();
+
     if (buf[5] == 0x00) // 子类型 0x00：打印机检测阶段
     {
-        if (have_registered) return; // 已注册则不再回复
+        ams_online_detect::poll(g_online_detect_state, g_online_detect_config, time_ticks32());
+        const ams_online_detect::QueryAction action = ams_online_detect::on_query(g_online_detect_state);
 
-        if (online_detect_phase == 0u)
-        {
-            online_detect_prefix_now = 0x0Cu; // 第一次检测使用前缀 0x0C
-            online_detect_phase = 1u;
-        }
-        else
-        {
-            online_detect_prefix_now = 0x0Au; // 重复检测使用前缀 0x0A
-            online_detect_phase = 2u;
-        }
+        if (action == ams_online_detect::QueryAction::stay_silent)
+            return;
+
+        online_detect_prefix_now = (action == ams_online_detect::QueryAction::offer_first)
+            ? 0x0Cu : 0x0Au;
 
         online_detect_build_packet(ams_num, 0x00);
 
@@ -1172,8 +1177,8 @@ void get_package_online_detect(unsigned char *buf, int length)
     if (memcmp(online_detect_res + 7, buf + 7, 17) != 0)
         return;
 
-    have_registered = true;     // 标记为已注册
-    online_detect_phase = 3u;
+    ams_online_detect::latch_confirm(g_online_detect_state, time_ticks32());
+    bmcu_link_ams_registration_confirm();
 
     uint8_t *out = bus_port_to_host.tx_build_buf();
     memcpy(out, online_detect_res, 29);
@@ -1199,6 +1204,8 @@ void get_package_long_packge_MC_online(unsigned char *buf, int length)
     if (printer_data_long.data_length < 1u) return;
     if (!ams[bambubus_ams_map[fixed_ams_num]].online) return;
     if (printer_data_long.datas[0] != fixed_ams_num) return; // 验证 AMS 编号
+
+    bmcu_link_ams_service_frame(2u); // kServiceMcOnline
 
     // 构建回复数据：6 字节确认包
     unsigned char resp[6] = {fixed_ams_num, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -1445,9 +1452,7 @@ void get_package_long_packge_serial_number(unsigned char *buf, int length)
  * 包含固件版本号（50 = 0x32）和设备型号名称 "AMS08"。
  * 版本号采用 BCD 编码：0x0A=10, 0x14=20, 0x1E=30, 0x28=40, 0x32=50
  */
-// unsigned char long_packge_version_version_and_name_AMS08[] = {0x00, 0x00, 0x34, 0x0A , // 版本号（52）
-//                                                               0x41, 0x4D, 0x53, 0x30, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // 设备名称 "AMS08"
-unsigned char long_packge_version_version_and_name_AMS08[] = {0x57, 0x15, 0x00, 0x04 , // verison number
+unsigned char long_packge_version_version_and_name_AMS08[] = {0x00, 0x04, 0x05, 0x0A , // 版本号 10.05.04.00 (倒序+十进制)
                                                               0x41, 0x4D, 0x53, 0x30, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 /**

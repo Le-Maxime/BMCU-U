@@ -39,13 +39,29 @@ void Motion_control_set_PWM(uint8_t CHx, int PWM);
  * @param error 错误状态标志，非零时所有电机停止（安全保护）
  */
 void Motion_control_run(int error);
+enum MotionControlFault : uint8_t
+{
+    MOTION_FAULT_NONE = 0u,
+    MOTION_FAULT_PULL_NO_PROGRESS = 1u,
+    MOTION_FAULT_PULL_TRAVEL_BUDGET = 2u,
+};
 
-/**
- * @brief 将双微动开关的"无料"电压阈值保存到 Flash
- *        用于校准自动加载检测的触发灵敏度
- * @return true 保存成功，false 保存失败
- */
 bool Motion_control_save_dm_key_none_thresholds(void);
+
+struct MotionControlChannelTelemetry
+{
+    uint16_t raw_angle;
+    int16_t position_delta;
+    int16_t motor_pwm;
+    uint8_t sensor_online;
+    uint8_t motion_fault;
+    uint8_t sensor_good;
+    uint8_t controller_motion;
+};
+
+bool Motion_control_get_channel_telemetry(uint8_t channel, MotionControlChannelTelemetry* output);
+bool Motion_control_is_reset_safe(void);
+float Motion_control_get_filament_meters(uint8_t channel);
 
 /**
  * @brief 检测4个耗材通道是否物理插入

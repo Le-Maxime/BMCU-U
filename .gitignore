@@ -5,3 +5,7 @@
 *.debug.lst
 *.log
 build_*.txt
+firmwares/
+test_builds/
+*.zip
+kaizou/

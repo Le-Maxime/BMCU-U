@@ -3385,3 +3385,27 @@ void Motion_control_init()
 
     MOTOR_init();
 }
+
+bool Motion_control_is_reset_safe(void)
+{
+    return true;
+}
+
+bool Motion_control_get_channel_telemetry(uint8_t channel, MotionControlChannelTelemetry* output)
+{
+    if (channel >= kChCount || output == nullptr) return false;
+    output->raw_angle = MC_AS5600.raw_angle[channel];
+    output->position_delta = 0;
+    output->motor_pwm = 0;
+    output->sensor_online = MC_AS5600.online[channel] ? 1u : 0u;
+    output->motion_fault = 0;
+    output->sensor_good = g_as5600_good[channel];
+    output->controller_motion = (uint8_t)ams[BAMBU_BUS_AMS_NUM].filament[channel].motion;
+    return true;
+}
+
+float Motion_control_get_filament_meters(uint8_t channel)
+{
+    if (channel >= kChCount) return 0.0f;
+    return filament_now_position[channel];
+}
