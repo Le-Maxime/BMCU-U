@@ -2419,33 +2419,49 @@ static bool motor_motion_filamnet_pull_back_to_online_key(uint64_t time_now)
                 filament_pull_back_target[i] = pull_target;
                 filament_now_position[i] = filament_redetect;
             }
-            else if (MC_ONLINE_key_stu[i] == 0)
-            {
-                g_pull_remain_m[i]  = 0.0f;
-                g_pull_speed_set[i] = -PULL_V_FAST;
-                MOTOR_CONTROL[i].set_motion(filament_motion_enum::filament_motion_stop, 100, time_now);
-                // v4.0-tpu: TPU 软料回弹，固定长度回抽额外多退 pull_comp_m（仅该通道识别为 TPU 时）
-                float pull_target = motion_control_pull_back_distance;
-                if (A.filament[i].filament_type == _filament_type::tpu)
-                {
-                    const _tpu_param *tp = tpu_param_lookup(A.filament[i].bambubus_filament_id);
-                    pull_target += tp->pull_comp_m;
-                }
-                filament_pull_back_target[i] = pull_target;
-                filament_now_position[i] = filament_redetect;
-            }
             else
             {
-                const float remain = target - d; // m (>=0)
-                g_pull_remain_m[i] = (remain > 0.0f) ? remain : 0.0f;
+                bool should_stop = false;
 
-                float k = g_pull_remain_m[i] / PULL_RAMP_M;   // 1..0 w końcówce
-                k = clampf(k, 0.0f, 1.0f);
+                if (MC_ONLINE_key_stu[i] == 0)
+                {
+                    should_stop = true;
+                }
+#if BMCU_DM_TWO_MICROSWITCH
+                else if (MC_ONLINE_key_stu[i] == 2)
+                {
+                    should_stop = true;
+                }
+#endif
 
-                const float v = PULL_V_END + (PULL_V_FAST - PULL_V_END) * k; // mm/s
-                g_pull_speed_set[i] = -v;
+                if (should_stop)
+                {
+                    g_pull_remain_m[i]  = 0.0f;
+                    g_pull_speed_set[i] = -PULL_V_FAST;
+                    MOTOR_CONTROL[i].set_motion(filament_motion_enum::filament_motion_stop, 100, time_now);
+                    // v4.0-tpu: TPU 软料回弹，固定长度回抽额外多退 pull_comp_m（仅该通道识别为 TPU 时）
+                    float pull_target = motion_control_pull_back_distance;
+                    if (A.filament[i].filament_type == _filament_type::tpu)
+                    {
+                        const _tpu_param *tp = tpu_param_lookup(A.filament[i].bambubus_filament_id);
+                        pull_target += tp->pull_comp_m;
+                    }
+                    filament_pull_back_target[i] = pull_target;
+                    filament_now_position[i] = filament_redetect;
+                }
+                else
+                {
+                    const float remain = target - d; // m (>=0)
+                    g_pull_remain_m[i] = (remain > 0.0f) ? remain : 0.0f;
 
-                MOTOR_CONTROL[i].set_motion(filament_motion_enum::filament_motion_pull, 100, time_now);
+                    float k = g_pull_remain_m[i] / PULL_RAMP_M;   // 1..0 w końcówce
+                    k = clampf(k, 0.0f, 1.0f);
+
+                    const float v = PULL_V_END + (PULL_V_FAST - PULL_V_END) * k; // mm/s
+                    g_pull_speed_set[i] = -v;
+
+                    MOTOR_CONTROL[i].set_motion(filament_motion_enum::filament_motion_pull, 100, time_now);
+                }
             }
 
             wait = true;
@@ -2456,7 +2472,20 @@ static bool motor_motion_filamnet_pull_back_to_online_key(uint64_t time_now)
         {
             MC_STU_RGB_set_latch(i, 0xFFu, 0xFFu, 0x00u, time_now, 0u);
 
+            bool redetect_done = true;
+
             if (MC_ONLINE_key_stu[i] == 0)
+            {
+                redetect_done = false;
+            }
+#if BMCU_DM_TWO_MICROSWITCH
+            else if (MC_ONLINE_key_stu[i] == 2)
+            {
+                redetect_done = false;
+            }
+#endif
+
+            if (!redetect_done)
             {
                 MOTOR_CONTROL[i].set_motion(filament_motion_enum::filament_motion_redetect, 100, time_now);
             }
