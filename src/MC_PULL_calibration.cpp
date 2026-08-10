@@ -466,8 +466,8 @@ void MC_PULL_calibration_boot()
     const bool ok_wipe = Flash_NVM_full_clear();  // 清除旧数据
 
     // --- 第一阶段: 采集空闲状态ADC均值 ---
-    double sum_raw[4] = {0, 0, 0, 0};   // 拉力传感器累加和
-    double sum_key[4] = {0, 0, 0, 0};   // 按键传感器累加和
+    float sum_raw[4] = {0, 0, 0, 0};   // 拉力传感器累加和
+    float sum_key[4] = {0, 0, 0, 0};   // 按键传感器累加和
     const int N = 90;                     // 采样次数
     const uint32_t tpm = time_hw_ticks_per_ms();
     const uint32_t t0  = time_ticks32();
@@ -498,7 +498,7 @@ void MC_PULL_calibration_boot()
     for (int ch = 0; ch < 4; ch++)
     {
         if (!filament_channel_inserted[ch]) continue;
-        center_raw[ch] = (float)(sum_raw[ch] / (double)N);  // 90次采样均值
+        center_raw[ch] = sum_raw[ch] / (float)N;  // 90次采样均值
     }
 
     // --- 第二阶段: 计算偏移量和按键阈值 ---
@@ -518,7 +518,7 @@ void MC_PULL_calibration_boot()
         MC_PULL_POLARITY[ch] = 1;
         // 按键无料盘阈值(基于空闲按键电压计算)
         MC_DM_KEY_NONE_THRESH[ch] =
-            dm_key_none_threshold_from_idle((float)(sum_key[ch] / (double)N));
+            dm_key_none_threshold_from_idle(sum_key[ch] / (float)N);
     }
 
     // 计算校准后的中心电压参考值(加上偏移量后应接近1.65V)

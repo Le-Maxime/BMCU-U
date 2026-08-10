@@ -2191,7 +2191,7 @@ public:
             const uint16_t on  = tpu_p_run->push_on_ms;
             if (cyc > 0u && on < cyc)
             {
-                const uint32_t phase = (uint32_t)(now_ms % (uint64_t)cyc);
+                const uint32_t phase = (uint32_t)now_ms % cyc;
                 const bool pushing_fwd = (dir != 0.0f) && (((float)pwm_out0) * dir > 0.0f);
                 if (pushing_fwd && phase >= (uint32_t)on)
                 {
