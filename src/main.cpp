@@ -28,6 +28,7 @@
 #include "Debug_log.h"
 #include "th_sensor.h"
 #include "bmcu_link.h"
+#include "ssd1306_oled.h"
 #include <string.h>
 
 /* 系统 RGB LED 实例（1 颗，PD1 引脚） */
@@ -416,6 +417,9 @@ int main(void)
     /* 初始化各子系统 */
     DEBUG_init();          /* 调试串口（可选） */
     th_sensor_init();       /* 温湿度传感器（自动检测类型） */
+#ifdef BMCU_OLED
+    SSD1306_OLED::init();   /* OLED 显示屏（硬件 I2C2，自动探测 ACK） */
+#endif
     ams_init();            /* AMS 数据结构初始化 */
     Flash_saves_init();    /* Flash 存储初始化 */
 
@@ -519,6 +523,23 @@ int main(void)
             last_th_ms = now_ms;
             th_sensor_update_filament();
         }
+
+        /* 每 1 秒更新一次 OLED 显示（页面轮询 + 动作覆盖） */
+#ifdef BMCU_OLED
+        static uint32_t last_oled_ms = 0u;
+        if ((now_ms - last_oled_ms) >= 1000u)
+        {
+            last_oled_ms = now_ms;
+            _ams* a = &ams[BAMBU_BUS_AMS_NUM];
+            SSD1306_OLED::tick(
+                th_sensor_is_present(),   /* 板上是否有传感器 */
+                th_sensor_is_online(),    /* 传感器是否在线 */
+                (float)a->filament[0].compartment_temperature,  /* 温度 */
+                (float)a->filament[0].compartment_humidity,     /* 湿度 */
+                true                      /* 通讯状态 */
+            );
+        }
+#endif
 
         /* 每30秒重新检测传感器类型（支持热插拔和更换传感器） */
         static uint32_t last_th_detect_ms = 0u;

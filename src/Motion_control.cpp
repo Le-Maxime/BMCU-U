@@ -19,6 +19,7 @@
 #include "many_soft_AS5600.h"
 #include "app_api.h"
 #include "hal/time_hw.h"
+#include "tpu_params.h"
 
 /** @brief 计算浮点数绝对值 */
 static inline float absf(float x) { return (x < 0.0f) ? -x : x; }
@@ -1241,6 +1242,10 @@ public:
         float speed_set = 0.0f;
         const float now_speed = speed_as5600[CHx];
         float x = 0.0f;
+
+        // v4.0-tpu: TPU 通道识别结果(函数级) 供末尾间歇送料门控统一使用
+        const _tpu_param *tpu_p_run = nullptr;
+
 #if BMCU_DM_TWO_MICROSWITCH
         bool  dm_autoload_active = false;
         float dm_autoload_x      = 0.0f;
@@ -1701,8 +1706,17 @@ public:
             {
                 const float pct = MC_PULL_pct_f[CHx];
 
-                constexpr float target_pct = MC_ON_USE_TARGET_PCT;
-                constexpr float band_hi    = MC_ON_USE_BAND_HI_PCT;
+                // v4.0-tpu: 运行时识别 TPU 通道，使用对应型号参数替代刚性常量
+                const _tpu_param *tpu_p = nullptr;
+                tpu_p_run = nullptr;
+                if (ams[motion_control_ams_num].filament[CHx].filament_type == _filament_type::tpu)
+                {
+                    tpu_p = tpu_param_fixed((uint8_t)CHx);
+                    tpu_p_run = tpu_p;
+                }
+
+                float target_pct = tpu_p ? tpu_p->on_use_target_pct : MC_ON_USE_TARGET_PCT;
+                float band_hi    = tpu_p ? tpu_p->on_use_band_hi    : MC_ON_USE_BAND_HI_PCT;
 
                 float band_hi_eff = band_hi;
 
@@ -1735,11 +1749,12 @@ public:
                 }
 
                 constexpr float pwm_lo          = 380.0f;
-                constexpr float pct_fast_onuse  = 50.0f;
-                constexpr float pwm_fast_onuse  = 900.0f;
-                constexpr float pwm_cap         = 900.0f;
+                // v4.0-tpu: 常规 on_use 推力上限按 TPU 型号降级（软料防过推/啃料）
+                const float pct_fast_onuse  = tpu_p ? (target_pct + 5.0f) : 50.0f;
+                const float pwm_fast_onuse  = tpu_p ? tpu_p->feed_pwm_hi : 900.0f;
+                const float pwm_cap         = tpu_p ? tpu_p->feed_pwm_hi : 900.0f;
 
-                constexpr float slope =
+                const float slope =
                     (pwm_fast_onuse - pwm_lo) / ((target_pct - MC_ON_USE_BAND_LO_DELTA) - pct_fast_onuse);
 
                 retract_hys_active = 0;
@@ -2094,7 +2109,7 @@ public:
             if (x > hi) x = hi;
         }
 
-        const int pwm_out0 = (int)x;
+        int pwm_out0 = (int)x;
 
         if (motion == filament_motion_enum::filament_motion_pressure_ctrl_on_use && !g_on_use_low_latch[CHx])
         {
@@ -2163,6 +2178,26 @@ public:
         else
         {
             g_on_use_hi_pwm_us[CHx] = 0u;
+        }
+
+        // v4.0-tpu: TPU 间歇送料门控（统一出口，覆盖 Stage2 装填/on_use/避让所有分支）
+        // 软料不能被持续推力顶着，否则料被压缩、从缓冲头间隙挤出、进不了管。
+        // 周期内分"推窗口(push_on_ms, 正常给PWM)"和"停窗口(剩余时间, 强制 PWM=0)"，
+        // 停窗口让电机停转、料松弛/被打印机拉走，下一推窗口再补。越软停越久。
+        // 仅在 TPU 通道且为"往前送料"(x 与 dir 同向)时生效；回退/拉料不受影响。
+        if (tpu_p_run != nullptr)
+        {
+            const uint16_t cyc = tpu_p_run->push_cycle_ms;
+            const uint16_t on  = tpu_p_run->push_on_ms;
+            if (cyc > 0u && on < cyc)
+            {
+                const uint32_t phase = (uint32_t)(now_ms % (uint64_t)cyc);
+                const bool pushing_fwd = (dir != 0.0f) && (((float)pwm_out0) * dir > 0.0f);
+                if (pushing_fwd && phase >= (uint32_t)on)
+                {
+                    pwm_out0 = 0;   // 停窗口：电机停转，让软料松弛
+                }
+            }
         }
 
         const int pwm_out = pwm_out0;
@@ -2374,7 +2409,14 @@ static bool motor_motion_filamnet_pull_back_to_online_key(uint64_t time_now)
                 g_pull_remain_m[i]  = 0.0f;
                 g_pull_speed_set[i] = -PULL_V_FAST;
                 MOTOR_CONTROL[i].set_motion(filament_motion_enum::filament_motion_stop, 100, time_now);
-                filament_pull_back_target[i] = motion_control_pull_back_distance;
+                // v4.0-tpu: TPU 软料回弹，固定长度回抽额外多退 pull_comp_m（仅该通道识别为 TPU 时）
+                float pull_target = motion_control_pull_back_distance;
+                if (A.filament[i].filament_type == _filament_type::tpu)
+                {
+                    const _tpu_param *tp = tpu_param_lookup(A.filament[i].bambubus_filament_id);
+                    pull_target += tp->pull_comp_m;
+                }
+                filament_pull_back_target[i] = pull_target;
                 filament_now_position[i] = filament_redetect;
             }
             else if (MC_ONLINE_key_stu[i] == 0)
@@ -2382,7 +2424,14 @@ static bool motor_motion_filamnet_pull_back_to_online_key(uint64_t time_now)
                 g_pull_remain_m[i]  = 0.0f;
                 g_pull_speed_set[i] = -PULL_V_FAST;
                 MOTOR_CONTROL[i].set_motion(filament_motion_enum::filament_motion_stop, 100, time_now);
-                filament_pull_back_target[i] = motion_control_pull_back_distance;
+                // v4.0-tpu: TPU 软料回弹，固定长度回抽额外多退 pull_comp_m（仅该通道识别为 TPU 时）
+                float pull_target = motion_control_pull_back_distance;
+                if (A.filament[i].filament_type == _filament_type::tpu)
+                {
+                    const _tpu_param *tp = tpu_param_lookup(A.filament[i].bambubus_filament_id);
+                    pull_target += tp->pull_comp_m;
+                }
+                filament_pull_back_target[i] = pull_target;
                 filament_now_position[i] = filament_redetect;
             }
             else

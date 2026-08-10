@@ -448,3 +448,13 @@ const char* th_sensor_name(void)
         default:         return "NONE";
     }
 }
+
+uint8_t th_sensor_is_present(void)
+{
+    return (detected_type != TH_NONE) ? 1u : 0u;
+}
+
+uint8_t th_sensor_is_online(void)
+{
+    return (detected_type != TH_NONE) ? 1u : 0u;
+}

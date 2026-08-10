@@ -50,6 +50,20 @@ uint8_t th_sensor_read(float *temperature, float *humidity);
  */
 const char* th_sensor_name(void);
 
+/**
+ * @brief 检查是否有传感器存在
+ *
+ * @return  1=检测到传感器，0=无传感器
+ */
+uint8_t th_sensor_is_present(void);
+
+/**
+ * @brief 检查传感器是否在线（最近一次读取成功）
+ *
+ * @return  1=传感器在线，0=传感器离线或未检测到
+ */
+uint8_t th_sensor_is_online(void);
+
 #ifdef __cplusplus
 }
 #endif

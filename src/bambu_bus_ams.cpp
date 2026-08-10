@@ -17,6 +17,30 @@
  */
 uint8_t bambubus_ams_map[4] = {0, 1, 2, 3};
 
+/**
+ * @brief 根据 Bambu filament_id 前缀解析耗材材质类型
+ *
+ * Bambu filament_id 格式为"GFxNN"，其中 x 决定材质类型：
+ *   GFA = PLA, GFG = PETG, GFB = ABS, GFL = PA, GFU = TPU
+ *
+ * @param id 指向8字节 filament_id 字符串
+ * @return _filament_type 材质类型枚举
+ */
+static _filament_type bambubus_filament_id_to_type(const char *id)
+{
+    if (id == nullptr || id[0] != 'G' || id[1] != 'F')
+        return _filament_type::unknown;
+    switch (id[2])
+    {
+        case 'A': return _filament_type::pla;
+        case 'G': return _filament_type::petg;
+        case 'B': return _filament_type::abs;
+        case 'L': return _filament_type::pa;
+        case 'U': return _filament_type::tpu;
+        default:  return _filament_type::other;
+    }
+}
+
 static void bambubus_build_static_serial(void);
 
 /**
@@ -69,6 +93,9 @@ void bambubus_init()
 {
     bambubus_build_static_serial();
     bambubus_heartbeat_deadline = 0u;
+    // 标记本地 AMS 在线，否则 get_package_set_filament 中的 online 检查会跳过
+    const uint8_t fixed = (uint8_t)BAMBU_BUS_AMS_NUM;
+    ams[bambubus_ams_map[fixed]].online = true;
 }
 
 /**
@@ -419,13 +446,17 @@ bool set_motion(unsigned char read_num, unsigned char statu_flags, unsigned char
             // 使用中停止：暂停当前耗材输送
             t_sendout_onuse = 0u;
 
-            if (!allow_stop) return true;         // 只有当前装载通道才能停止
-
             const _filament_motion prev = ams_ptr->filament[ch].motion;
 
-            // 只有在使用中或准备中才能切换到停止状态
+            // v3.2: 打印机发来暂停/停止时，即使正在自己送料(send_out)也必须立刻响应并停机。
+            // 原逻辑在 send_out 时 loaded==0xFF，allow_stop 为 false 会被忽略，导致料一直转不停。
+            if (!allow_stop && (prev != _filament_motion::send_out))
+                return true;
+
+            // 只有在使用中、准备中或正在送料时才能切换到停止状态
             if (prev == _filament_motion::on_use ||
-                prev == _filament_motion::before_on_use)
+                prev == _filament_motion::before_on_use ||
+                prev == _filament_motion::send_out)
             {
                 ams_ptr->filament[ch].motion = _filament_motion::stop_on_use;
             }
@@ -1452,7 +1483,7 @@ void get_package_long_packge_serial_number(unsigned char *buf, int length)
  * 包含固件版本号（50 = 0x32）和设备型号名称 "AMS08"。
  * 版本号采用 BCD 编码：0x0A=10, 0x14=20, 0x1E=30, 0x28=40, 0x32=50
  */
-unsigned char long_packge_version_version_and_name_AMS08[] = {0x00, 0x04, 0x05, 0x0A , // 版本号 10.05.04.00 (倒序+十进制)
+unsigned char long_packge_version_version_and_name_AMS08[] = {0x00, 0x05, 0x05, 0x0A , // 版本号 10.05.05.00 (倒序+十进制)
                                                               0x41, 0x4D, 0x53, 0x30, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 /**
@@ -1536,6 +1567,10 @@ void get_package_set_filament(unsigned char *buf, int length)
     memcpy(ams_ptr->filament[read_num].name, buf + 23, sizeof(ams_ptr->filament[read_num].name));
     ams_ptr->filament[read_num].name[19] = 0; // 确保字符串以 null 结尾
 
+    // v4.0-tpu: 解析 filament_id 获取材质类型，并记录写死表真实型号供 RGB 用
+    ams_ptr->filament[read_num].filament_type = bambubus_filament_id_to_type(ams_ptr->filament[read_num].bambubus_filament_id);
+    ams_ptr->filament[read_num].tpu_model = tpu_param_fixed(read_num)->model;
+
     // 发送固定回复包
     memcpy(out, set_filament_res, sizeof(set_filament_res));
     bus_port_to_host.send_data_len = sizeof(set_filament_res);
@@ -1594,6 +1629,10 @@ void get_package_set_filament_type2(unsigned char *buf, int length)
     memset(ams_ptr->filament[read_num].name, 0, sizeof(ams_ptr->filament[read_num].name));
     memcpy(ams_ptr->filament[read_num].name, printer_data_long.datas + 18, 16);
     ams_ptr->filament[read_num].name[19] = 0;
+
+    // v4.0-tpu: 解析 filament_id 获取材质类型，并记录写死表真实型号供 RGB 用
+    ams_ptr->filament[read_num].filament_type = bambubus_filament_id_to_type(ams_ptr->filament[read_num].bambubus_filament_id);
+    ams_ptr->filament[read_num].tpu_model = tpu_param_fixed(read_num)->model;
 
     // 构建长帧回复
     set_filament_res_type2[0] = fixed_ams_num;

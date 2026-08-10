@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "tpu_params.h"
 
 /**
  * @brief AMS单元最大数量
@@ -24,6 +25,24 @@ enum class _filament_motion : uint8_t
     pull_back       = 4,  /**< 回抽中状态，耗材正在从打印头回抽至AMS料槽 */
     before_on_use   = 5,  /**< 使用前状态，耗材即将进入使用阶段（对应指令 09 A5） */
     stop_on_use     = 6   /**< 停止使用状态，耗材停止使用/退出打印（对应指令 07 00） */
+};
+
+/**
+ * @brief 耗材材质类型枚举
+ *
+ * 由打印机下发的bambubus_filament_id解析得到。
+ * Bambu filament_id前缀对应: GFA=PLA, GFG=PETG, GFB=ABS, GFL=PA, GFU=TPU。
+ * 用于运行时识别/RGB显示，不参与送料控制（送料控制在编译期由BMCU_TPU_MODEL决定）。
+ */
+enum class _filament_type : uint8_t
+{
+    unknown = 0,  /**< 未识别/默认（按刚性料PLA/PETG行为） */
+    pla     = 1,  /**< GFA** - PLA系列 */
+    petg    = 2,  /**< GFG** - PETG系列 */
+    abs     = 3,  /**< GFB** - ABS系列 */
+    pa      = 4,  /**< GFL** - PA尼龙系列 */
+    tpu     = 5,  /**< GFU** - TPU软料（v4.0专用参数针对此类） */
+    other   = 6   /**< 其他未分类材质 */
 };
 
 /**
@@ -107,6 +126,20 @@ struct _filament
     uint8_t seal_status = 0;
 
     /**
+     * 运行时识别的耗材材质类型
+     * 由bambubus_filament_id解析得到，用于运行时识别/RGB显示。
+     * PLA/PETG等非TPU走刚性逻辑，TPU走专用参数。
+     */
+    _filament_type filament_type = _filament_type::unknown;
+
+    /**
+     * TPU具体型号（用于RGB识别色）
+     * 当filament_type==tpu时，记录具体TPU型号（GFU98/GFU90等）。
+     * 非TPU材质此字段为UNKNOWN。
+     */
+    _tpu_model tpu_model = _tpu_model::UNKNOWN;
+
+    /**
      * 料槽内腔温度(℃)
      * 有符号8位整数，范围-128℃~127℃，默认22℃。
      * 用于监控耗材存储环境温度。
@@ -164,6 +197,8 @@ struct _filament
         meters_virtual_count = 0;
         online = true;
         motion = _filament_motion::idle;
+        filament_type = _filament_type::unknown;
+        tpu_model = _tpu_model::UNKNOWN;
         compartment_temperature = 22;
         compartment_humidity = 20;
     }

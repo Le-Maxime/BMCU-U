@@ -234,6 +234,26 @@ https://www.youtube.com/watch?v=Hn_DNzSmhuc
 
 # 更新日志
 
+## V10.5.5
+
+### 用户可见变更
+- **OLED 显示屏支持**：新增 SSD1306 OLED 状态屏，复用硬件 I2C2 总线，显示温湿度、通讯状态、四通道料况等信息。开机时自动检测——有屏正常显示，无屏零开销跳过，不影响打印机通信。
+- **OLED 热插拔**：运行中插入 OLED 屏幕后 3 秒内自动检测并初始化显示，无需重启 BMCU。
+- **多传感器热插拔改进**：运行中更换温湿度传感器后自动重新检测，无需重启。
+
+### 技术变更
+- OLED 驱动 `write_cmd`/`write_data`/`oled_write_data_bulk` 底层函数增加 `s_ready` 快速退出：未检测到屏时所有 I2C 写操作立即返回，零 CPU/总线开销。
+- OLED 底层写函数检查 `i2c2_write` 返回值，I2C 写失败（NACK/超时）自动标记 `s_ready=false`，后续操作全部跳过。
+- OLED 初始化时通过 `probe_ack()` 在 I2C 总线干净状态下探测屏幕 ACK，有屏则正常初始化，无屏则跳过全部初始化命令。
+- `tick()` 中增加定期重探测逻辑：当 `s_ready=false` 时每 3 秒尝试一次 `probe_ack()`，检测到屏幕插入后自动重新初始化。
+- `BMCU_OLED` 默认编入（头文件默认 `#define BMCU_OLED`），无需编译参数即可使用。
+- 温湿度传感器运行时热插拔：连续 10 次采样失败自动标记传感器离线，成功一次立即恢复。
+
+### 贡献者
+- **[jarczakpawel](https://github.com/jarczakpawel)** — BMCU 原始固件作者
+- **[kaizou](https://github.com/kaizou)** — 在线检测策略引擎、AMS 服务观测模块、BMCU Link 协议
+- **dzrab** — OLED 驱动集成、热插拔支持、多传感器兼容、中文文档
+
 ## V10.5.4
 
 ### 用户可见变更
