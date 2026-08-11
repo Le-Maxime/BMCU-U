@@ -1,4 +1,4 @@
-# BMCU 固件 —— 校准与兼容性说明
+﻿# BMCU 固件 —— 校准与兼容性说明
 
 本 BMCU 固件已在最新的 Bambu Lab A1 固件上测试并验证通过。
 
@@ -249,7 +249,7 @@ https://www.youtube.com/watch?v=Hn_DNzSmhuc
 
 ### 贡献者
 - **[jarczakpawel](https://github.com/jarczakpawel)** — BMCU 原始固件作者
-- **[kaizou](https://github.com/kaizou)** — 在线检测策略引擎、AMS 服务观测模块、BMCU Link 协议
+- **[kaizou](https://github.com/dj-oyu/BMCU-C-PJARCZAK-kaizou)** — 在线检测策略引擎、AMS 服务观测模块、BMCU Link 协议
 - **[DZRAB](https://github.com/DZRAB)** — OLED 驱动集成、热插拔支持、多传感器兼容、中文文档
 
 ## V10.5.5
@@ -269,7 +269,7 @@ https://www.youtube.com/watch?v=Hn_DNzSmhuc
 
 ### 贡献者
 - **[jarczakpawel](https://github.com/jarczakpawel)** — BMCU 原始固件作者
-- **[kaizou](https://github.com/kaizou)** — 在线检测策略引擎、AMS 服务观测模块、BMCU Link 协议
+- **[kaizou](https://github.com/dj-oyu/BMCU-C-PJARCZAK-kaizou)** — 在线检测策略引擎、AMS 服务观测模块、BMCU Link 协议
 - **[DZRAB](https://github.com/DZRAB)** — OLED 驱动集成、热插拔支持、多传感器兼容、中文文档
 
 ## V10.5.4
