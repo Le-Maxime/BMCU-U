@@ -9,3 +9,4 @@ firmwares/
 test_builds/
 *.zip
 kaizou/
+.pio_parallel/

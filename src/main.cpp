@@ -344,9 +344,9 @@ static void th_sensor_update_filament(void)
     _ams *a = &ams[BAMBU_BUS_AMS_NUM];
     for (uint8_t i = 0; i < 4u; i++)
     {
-        if (ok)
+        if (!ok)
             a->filament[i].compartment_temperature = (int8_t)(temp + 0.5f);
-        if (ok)
+        if (!ok)
             a->filament[i].compartment_humidity = (uint8_t)(humi + 0.5f);
     }
 }
