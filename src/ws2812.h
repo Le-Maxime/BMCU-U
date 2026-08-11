@@ -107,6 +107,16 @@ public:
      */
     inline bool is_dirty() const { return dirty; }
 
+    /**
+     * @brief 设置整条灯链的亮度缩放
+     *
+     * 所有之后写入的颜色在发送时按该比例缩放 (0=全灭, 255=原亮度)。
+     * 用于夜间降亮：主板灯固定低亮度、通道灯按使用状态切换。
+     *
+     * @param b 亮度系数 (0~255, 255=不缩放)
+     */
+    void set_brightness(uint8_t b);
+
 private:
     /** @brief GPIO 端口指针 */
     GPIO_TypeDef* port = nullptr;
@@ -134,4 +144,7 @@ private:
 
     /** @brief 脏标记: 为 true 时表示缓冲区有变化需要发送 */
     bool dirty = false;
+
+    /** @brief 亮度缩放系数 (0~255, 255=不缩放), 在 set_RGB 出口统一应用 */
+    uint8_t brightness = 255u;
 };

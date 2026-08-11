@@ -197,24 +197,23 @@ void Debug_log_write_num(const void *data, int num)
     while (USART_GetFlagStatus(USART3, USART_FLAG_TC) == RESET) { }
 }
 
+#ifdef Debug_log_on
 /**
  * @brief 标准库 _write() 函数重定向
  *
  * 将 printf() 的输出重定向到 USART3 调试串口。
- * 当 Debug_log_on 未定义时，此函数为空操作。
+ * 仅在调试开启时编译，避免无用代码占用 Flash。
  */
 __attribute__((used))
 int _write(int fd, char *buf, int size)
 {
-#ifdef Debug_log_on
     (void)fd;
     Debug_log_write_num(buf, size);
-#else
-    (void)fd; (void)buf; (void)size;
-#endif
     return size;
 }
+#endif
 
+#ifdef Debug_log_on
 /**
  * @brief 标准库 _sbrk() 函数实现（堆内存管理）
  *
@@ -235,3 +234,4 @@ void *_sbrk(ptrdiff_t incr)
     curbrk += incr;
     return curbrk - incr;
 }
+#endif

@@ -3044,6 +3044,9 @@ static void motor_motion_run(int error, uint64_t time_now, uint32_t now_ticks)
             }
         }
 
+        // 亮度策略：所有通道灯固定 10% 亮度，任何状态不变化（夜间不刺眼）
+        RGBOUT[i].set_brightness(26);
+
         MC_PULL_ONLINE_RGB_set(i, r, g, b, is_filament_rgb);
     }
 }

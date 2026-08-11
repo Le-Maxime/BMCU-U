@@ -344,9 +344,9 @@ static void th_sensor_update_filament(void)
     _ams *a = &ams[BAMBU_BUS_AMS_NUM];
     for (uint8_t i = 0; i < 4u; i++)
     {
-        if (!ok)
+        if (ok)
             a->filament[i].compartment_temperature = (int8_t)(temp + 0.5f);
-        if (!ok)
+        if (ok)
             a->filament[i].compartment_humidity = (uint8_t)(humi + 0.5f);
     }
 }
@@ -407,6 +407,10 @@ int main(void)
     /* 初始化 RGB LED 硬件 */
     RGB_init();
     delay(10);
+
+    /* 主板灯固定低亮度（约10%），夜间不刺眼；
+       通道灯亮度同样固定 10%（由 Motion_control 统一设置） */
+    SYS_RGB.set_brightness(26);
 
     /* 开机指示：系统 LED 显示红色，所有通道 LED 关闭 */
     SYS_RGB.set_RGB(0x10, 0x00, 0x00, 0);

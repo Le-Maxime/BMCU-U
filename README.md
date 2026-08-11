@@ -234,6 +234,24 @@ https://www.youtube.com/watch?v=Hn_DNzSmhuc
 
 # 更新日志
 
+## V10.5.6
+
+### 用户可见变更
+- **RGB 灯亮度统一固定 10%**：主板状态灯与四通道槽位灯固定 26/255 亮度，删除运动/空闲动态亮度切换，夜间不刺眼；灯光颜色语义（料色、状态色）完全不变。
+- **温湿度上报逻辑修复**：修复读取结果写反的 Bug——读取成功时不再拒绝更新、失败时不再把上报值清零为 0℃，打印机端温湿度显示恢复正常。
+- **调试代码裁剪**：`_write()`/`_sbrk()`（printf/堆重定向）包进 `#ifdef Debug_log_on`，默认关闭状态下不编译，节省 Flash。
+
+### 技术变更
+- `Motion_control.cpp`：槽灯固定 `RGBOUT[i].set_brightness(26)`。
+- `main.cpp`：主板灯固定 `SYS_RGB.set_brightness(26)`；温湿度上报条件 `if (!ok)` → `if (ok)`。
+- `Debug_log.cpp`：`_write`/`_sbrk` 整体移入 `#ifdef Debug_log_on`。
+- 972 个固件变体全部重新编译，版本号升级为 `10.05.06.00`（Flash 占用保持 91.6%）。
+
+### 贡献者
+- **[jarczakpawel](https://github.com/jarczakpawel)** — BMCU 原始固件作者
+- **[kaizou](https://github.com/kaizou)** — 在线检测策略引擎、AMS 服务观测模块、BMCU Link 协议
+- **[DZRAB](https://github.com/DZRAB)** — OLED 驱动集成、热插拔支持、多传感器兼容、中文文档
+
 ## V10.5.5
 
 ### 用户可见变更

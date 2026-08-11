@@ -79,7 +79,6 @@ static inline __attribute__((always_inline)) void wait_until(uint32_t deadline)
     while (((uint32_t)(STK_CNTL - deadline) >> 31) != 0u) { }
 }
 
-#if BMCU_ONLINE_LED_FILAMENT_RGB
 /**
  * @brief 视频缩放: 将 8 位值乘以缩放因子
  *
@@ -95,6 +94,7 @@ static inline __attribute__((always_inline)) uint8_t scale8_video(uint8_t v, uin
     return (uint8_t)(((uint16_t)v * (uint16_t)scale + 255u) >> 8);
 }
 
+#if BMCU_ONLINE_LED_FILAMENT_RGB
 /**
  * @brief Gamma 校正查找表 (256 项)
  *
@@ -259,11 +259,39 @@ void WS2812_class::set_RGB(uint8_t R, uint8_t G, uint8_t B, uint8_t index)
 {
     if (index >= num) return;
 
+    // 统一亮度缩放出口：所有颜色写入都经过 brightness 缩放
+    if (brightness != 255u)
+    {
+        R = scale8_video(R, brightness);
+        G = scale8_video(G, brightness);
+        B = scale8_video(B, brightness);
+    }
+
     const uint32_t packed = ((uint32_t)G << 16) | ((uint32_t)R << 8) | (uint32_t)B; // GRB 打包
     if (last_grb[index] == packed) return; // 颜色未变, 跳过
 
     last_grb[index] = packed;
     dirty = true;
+}
+
+/**
+ * @brief 设置整条灯链的亮度缩放系数
+ *
+ * 存储新系数并失效在线颜色缓存，使下一次颜色写入
+ * 以新亮度重新计算并发送。
+ *
+ * @param b 亮度系数 (0~255, 255=不缩放)
+ */
+void WS2812_class::set_brightness(uint8_t b)
+{
+    if (b > 255u) b = 255u;
+    if (b == brightness) return;
+
+    brightness = b;
+
+    // 失效在线缓存：亮度变化后即使原始颜色相同也必须重发
+    for (uint32_t i = 0; i < (uint32_t)num; i++)
+        last_online_is_filament[i] = 0u;
 }
 
 /**
