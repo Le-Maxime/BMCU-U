@@ -2378,6 +2378,10 @@ static float filament_pull_back_target[4] = {
 /** @brief 回退前准备阶段：上次耗材位置（米） */
 static float  before_pb_last_m[4]      = {0,0,0,0};
 /** @brief 回退前准备阶段：已回退累计距离（米） */
+
+/* ===== redetect 确认状态（开关反抖） ===== */
+static bool     rd_ready[4]   = {false, false, false, false};   /**< 本轮 redetect 已初始化 */
+static uint64_t rd_hold_ms[4] = {0, 0, 0, 0};                   /**< 开关连续有料起始时刻(ms) */
 static float  before_pb_retracted_m[4] = {0,0,0,0};
 /** @brief 回退方向标志（+1=正向, -1=反向, 0=未确定） */
 static int8_t before_pb_sign[4]        = {0,0,0,0};
@@ -2417,6 +2421,7 @@ static bool motor_motion_filamnet_pull_back_to_online_key(uint64_t time_now)
                     pull_target += tp->pull_comp_m;
                 }
                 filament_pull_back_target[i] = pull_target;
+                rd_ready[i] = false;              // 复位 redetect 确认状态
                 filament_now_position[i] = filament_redetect;
             }
             else
@@ -2447,6 +2452,7 @@ static bool motor_motion_filamnet_pull_back_to_online_key(uint64_t time_now)
                         pull_target += tp->pull_comp_m;
                     }
                     filament_pull_back_target[i] = pull_target;
+                    rd_ready[i] = false;              // 复位 redetect 确认状态
                     filament_now_position[i] = filament_redetect;
                 }
                 else
@@ -2472,30 +2478,41 @@ static bool motor_motion_filamnet_pull_back_to_online_key(uint64_t time_now)
         {
             MC_STU_RGB_set_latch(i, 0xFFu, 0xFFu, 0x00u, time_now, 0u);
 
-            bool redetect_done = true;
-
-            if (MC_ONLINE_key_stu[i] == 0)
+            /* 本轮 redetect 首次进入：初始化 */
+            if (!rd_ready[i])
             {
-                redetect_done = false;
+                rd_ready[i]   = true;
+                rd_hold_ms[i] = 0ull;
             }
+
+            /* 开关反抖：有料需连续保持 50ms 才算确认到位（time_now 单位为 ms） */
+            bool key_on = (MC_ONLINE_key_stu[i] != 0);
 #if BMCU_DM_TWO_MICROSWITCH
-            else if (MC_ONLINE_key_stu[i] == 2)
-            {
-                redetect_done = false;
-            }
+            if (MC_ONLINE_key_stu[i] == 2) key_on = false;   // 双微动：仅外部开关/缓冲手势不算到位
 #endif
-
-            if (!redetect_done)
+            if (key_on)
             {
-                MOTOR_CONTROL[i].set_motion(filament_motion_enum::filament_motion_redetect, 100, time_now);
+                if (rd_hold_ms[i] == 0ull) rd_hold_ms[i] = time_now;
             }
             else
             {
+                rd_hold_ms[i] = 0ull;
+            }
+            const bool key_hold_ok = (rd_hold_ms[i] != 0ull) &&
+                                     (time_now - rd_hold_ms[i] >= 50u);
+
+            if (key_hold_ok)
+            {
+                rd_ready[i] = false;
                 MOTOR_CONTROL[i].set_motion(filament_motion_enum::filament_motion_stop, 100, time_now);
                 filament_now_position[i] = filament_idle;
 
                 A.filament_use_flag = 0x00;
                 A.filament[i].motion = _filament_motion::idle;
+            }
+            else
+            {
+                MOTOR_CONTROL[i].set_motion(filament_motion_enum::filament_motion_redetect, 100, time_now);
             }
 
             wait = true;

@@ -15,6 +15,7 @@
  */
 
 #include "ssd1306_oled.h"
+#include <stddef.h>
 #include "i2c2.h"          // 硬件 I2C2 驱动：i2c2_init / i2c2_write
 #include "hal/time_hw.h"   // delay() / time_ms64()
 #include "ams.h"           // ams[] / _filament / BAMBU_BUS_AMS_NUM（只读）
@@ -38,6 +39,46 @@ static void str_cpy(char* dst, const char* src)
     if (!src) { *dst = 0; return; }
     while (*src) *dst++ = *src++;
     *dst = 0;
+}
+
+/* 子串匹配（不区分大小写） */
+static bool str_contains(const char* hay, const char* needle)
+{
+    if (!hay || !needle) return false;
+    for (int i = 0; hay[i]; i++)
+    {
+        int j = 0;
+        while (hay[i + j] && needle[j] && hay[i + j] == needle[j]) j++;
+        if (!needle[j]) return true;
+    }
+    return false;
+}
+
+/* 从耗材名称关键词识别材质（第三方耗材 filament_id 常不规范，靠名称兜底） */
+static const char* material_from_name(const char* nm)
+{
+    if (!nm) return NULL;
+
+    char up[20];
+    int ul = 0;
+    for (int i = 0; nm[i] && ul < 19; i++)
+    {
+        char c = nm[i];
+        if (c >= 'a' && c <= 'z') c = (char)(c - 'a' + 'A');
+        up[ul++] = c;
+    }
+    up[ul] = 0;
+
+    if (str_contains(up, "PETG")) return "PETG";
+    if (str_contains(up, "PCTG")) return "PCTG";
+    if (str_contains(up, "PLA"))  return "PLA";
+    if (str_contains(up, "ABS"))  return "ABS";
+    if (str_contains(up, "ASA"))  return "ASA";
+    if (str_contains(up, "NYLON")) return "PA";
+    if (str_contains(up, "PC"))   return "PC";
+    if (str_contains(up, "PA"))   return "PA";
+    if (str_contains(up, "TPU"))  return "TPU";
+    return NULL;
 }
 
 /* ==================== 硬件 I2C2 底层 ==================== */
@@ -278,7 +319,7 @@ static const uint8_t InitCmd[] = {
     0xA1,        // 段重映射（左右翻转）
     0xC8,        // 扫描方向（上下翻转）
     0xDA,0x12,   // COM 引脚配置
-    0x81,0xCF,   // 对比度
+    0x81,0x40,   // 对比度(25%，保护OLED)
     0xD9,0xF1,   // 预充电周期
     0xDB,0x30,   // VCOMH 电平
     0xA4,        // 全屏点不强制
@@ -394,7 +435,7 @@ void SSD1306_OLED::draw_aht20(bool aht20_present, bool online, float temperature
     /* 板上无 AHT20：不显示任何温湿度 */
     if (!aht20_present)
     {
-        draw_line_if_changed(0, "NO AHT20");
+        draw_line_if_changed(0, "NO SENSOR");
         draw_line_if_changed(1, "");
         draw_line_if_changed(2, "");
         draw_line_if_changed(3, "");
@@ -402,11 +443,11 @@ void SSD1306_OLED::draw_aht20(bool aht20_present, bool online, float temperature
     }
 
     /* 行0：标题（固定） */
-    draw_line_if_changed(0, "AHT20 T/H");
+    draw_line_if_changed(0, "SENSOR T/H");
 
     if (!online)
     {
-        draw_line_if_changed(1, "AHT20");
+        draw_line_if_changed(1, "SENSOR");
         draw_line_if_changed(2, "OFFLINE");
         draw_line_if_changed(3, "");
         return;
@@ -487,47 +528,62 @@ const char* SSD1306_OLED::material_label(uint8_t ch)
         return "TPU?";
     }
 
-    /* 非 TPU：优先用 Bambu 下发的 filament_id（如 GFG00/GFA00） */
+    /* 非 TPU：优先用 Bambu 下发的 filament_id（如 GFG00/GFA00/GFB01） */
     if (f.bambubus_filament_id[0] && f.bambubus_filament_id[1])
     {
+        const char* id = f.bambubus_filament_id;
+        if (id[0] == 'G' && id[1] == 'F' && id[2] == 'G') return "PETG";
+        if (id[0] == 'G' && id[1] == 'F' && id[2] == 'A') return "PLA";
+        if (id[0] == 'G' && id[1] == 'F' && id[2] == 'B') return "ABS";
+        if (id[0] == 'G' && id[1] == 'F' && id[2] == 'P') return "PC";
+        if (id[0] == 'G' && id[1] == 'F' && id[2] == 'L') return "PA";
+        if (id[0] == 'G' && id[1] == 'F' && id[2] == 'U') return "TPU";
+        if (id[0] == 'A' && id[1] == 'B' && id[2] == 'S') return "ABS";
+
+        /* id 未识别（第三方耗材）：改用名称关键词确认 */
+        const char* m = material_from_name(f.name);
+        if (m) return m;
+
+        /* 无法识别：显示材质字母+两位序号（如 G00），保证有内容可看 */
         static char buf[8];
-        buf[0] = f.bambubus_filament_id[2];
-        buf[1] = f.bambubus_filament_id[3];
-        buf[2] = f.bambubus_filament_id[4];
+        buf[0] = id[2];
+        buf[1] = id[3];
+        buf[2] = id[4];
         buf[3] = 0;
-        if (buf[0] == 'G' && buf[1] == 'F' && buf[2] == 'G') return "PETG";
-        if (buf[0] == 'G' && buf[1] == 'F' && buf[2] == 'A') return "PLA";
-        if (buf[0] == 'A' && buf[1] == 'B' && buf[2] == 'S') return "ABS";
-        if (buf[0] == 'G' && buf[1] == 'F' && buf[2] == 'P') return "PC";
         return buf;
     }
 
-    if (f.name[0]) return f.name;
+    if (f.name[0])
+    {
+        const char* m = material_from_name(f.name);
+        if (m) return m;
+        return f.name;
+    }
     return "UNKN";
 }
 
 const char* SSD1306_OLED::color_name(uint8_t r, uint8_t g, uint8_t b)
 {
-    if (r < 30 && g < 30 && b < 30) return "BLA";
-    if (r > 225 && g > 225 && b > 225) return "WHI";
+    if (r < 30 && g < 30 && b < 30) return "BLACK";
+    if (r > 225 && g > 225 && b > 225) return "WHITE";
     if (r >= g && r >= b)
     {
-        if (g > 120 && b > 120) return "ORA";
-        if (b > 120) return "PUR";
-        if (g > 120) return "YEL";
+        if (g > 120 && b > 120) return "ORANGE";
+        if (b > 120) return "PURPLE";
+        if (g > 120) return "YELLOW";
         return "RED";
     }
     if (g >= r && g >= b)
     {
-        if (r > 120 && b > 120) return "CYA";
-        if (b > 120) return "CYA";
-        if (r > 120) return "YEL";
-        return "GRE";
+        if (r > 120 && b > 120) return "CYAN";
+        if (b > 120) return "CYAN";
+        if (r > 120) return "YELLOW";
+        return "GREEN";
     }
-    if (r > 120 && g > 120) return "CYA";
-    if (r > 120) return "PUR";
-    if (g > 120) return "CYA";
-    return "BLU";
+    if (r > 120 && g > 120) return "CYAN";
+    if (r > 120) return "PURPLE";
+    if (g > 120) return "CYAN";
+    return "BLUE";
 }
 
 void SSD1306_OLED::draw_channels()
@@ -548,22 +604,22 @@ void SSD1306_OLED::draw_channels()
 
         if (!f.online)
         {
-            line[n++] = 'E'; line[n++] = 'R'; line[n++] = 'R';
+            line[n++] = 'E'; line[n++] = 'M'; line[n++] = 'P'; line[n++] = 'T'; line[n++] = 'Y';
         }
         else if (f.meters <= 0.05f)
         {
             line[n++] = 'N'; line[n++] = 'U'; line[n++] = 'L'; line[n++] = 'L';
             const char* c = color_name(f.color_R, f.color_G, f.color_B);
-            line[8] = c[0]; line[9] = c[1]; line[10] = c[2];
+            for (int k = 0; c && c[k] && k < 7; k++) line[8 + k] = c[k];
         }
         else
         {
-            line[n++] = 'T';
-            line[n++] = (char)('0' + (int)f.filament_type);
-            line[n++] = 'F';
-            line[n++] = (char)('0' + (int)f.tpu_model);
+            const char* mat = material_label(r);
+            int mi = 0;
+            while (mat && mat[mi] && mi < 5) line[n++] = mat[mi++];
+            while (n < 8) line[n++] = ' ';
             const char* c = color_name(f.color_R, f.color_G, f.color_B);
-            line[8] = c[0]; line[9] = c[1]; line[10] = c[2];
+            for (int k = 0; c && c[k] && k < 7; k++) line[8 + k] = c[k];
         }
 
         draw_line_if_changed(r, line);

@@ -1,4 +1,5 @@
 #include "bambu_bus_ams.h"
+#include "ssd1306_oled.h"   // 宏 BMCU_OLED 在该头文件内部定义，必须无条件包含
 #include <string.h>
 #include "hal/irq_wch.h"
 #include "ams.h"
@@ -413,6 +414,9 @@ bool set_motion(unsigned char read_num, unsigned char statu_flags, unsigned char
             ams_ptr->filament[ch].motion = _filament_motion::send_out;
             ams_ptr->filament_use_flag = 0x02;    // 送丝使用标志
             ams_ptr->pressure = 0x4700;           // 送丝状态压力值
+#ifdef BMCU_OLED
+            SSD1306_OLED::notify_action(ch, SSD1306_OLED::oled_action::action_load);   // 进料覆盖显示
+#endif
         }
         else if (is_before_on_use)
         {
@@ -469,6 +473,10 @@ bool set_motion(unsigned char read_num, unsigned char statu_flags, unsigned char
             {
                 ams_ptr->pressure = 0x1E34;
             }
+#ifdef BMCU_OLED
+            // 打印机明确停止供料(stop_on_use)：立即结束 OLED 动作显示(退出 FEEDING/LOADING)
+            SSD1306_OLED::notify_action(ch, SSD1306_OLED::oled_action::action_idle);
+#endif
         }
         else if (is_on_use)
         {
@@ -511,6 +519,9 @@ bool set_motion(unsigned char read_num, unsigned char statu_flags, unsigned char
 
             ams_ptr->filament[ch].motion = _filament_motion::on_use;
             ams_ptr->filament_use_flag = 0x04;
+#ifdef BMCU_OLED
+            SSD1306_OLED::notify_action(ch, SSD1306_OLED::oled_action::action_feed);   // 送料覆盖显示
+#endif
 
             // 保持特殊压力值 0xF06F，否则使用默认压力
             if (ams_ptr->pressure != 0xF06Fu) ams_ptr->pressure = 0x2B00;
@@ -545,6 +556,9 @@ bool set_motion(unsigned char read_num, unsigned char statu_flags, unsigned char
             ams_ptr->pressure = 0x2B00;
 
             ams_state_set_unloaded(ch);           // 标记该通道已卸载
+#ifdef BMCU_OLED
+            SSD1306_OLED::notify_action(ch, SSD1306_OLED::oled_action::action_unload); // 退料覆盖显示
+#endif
         }
         else if (statu_flags == 0x09)
         {
@@ -574,6 +588,9 @@ bool set_motion(unsigned char read_num, unsigned char statu_flags, unsigned char
                 {
                     ams_ptr->filament[ch].motion = _filament_motion::pull_back;
                     ams_ptr->filament_use_flag = 0x02;
+#ifdef BMCU_OLED
+                    SSD1306_OLED::notify_action(ch, SSD1306_OLED::oled_action::action_unload); // 退料覆盖显示
+#endif
                 }
 
                 ams_ptr->pressure = 0x4700;
