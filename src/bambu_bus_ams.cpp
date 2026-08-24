@@ -1,5 +1,4 @@
 #include "bambu_bus_ams.h"
-#include "ssd1306_oled.h"   // 宏 BMCU_OLED 在该头文件内部定义，必须无条件包含
 #include <string.h>
 #include "hal/irq_wch.h"
 #include "ams.h"
