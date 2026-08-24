@@ -8,7 +8,7 @@
 #include "ahub_bus.h"
 #include "bambu_bus_ams.h"
 #include "ADC_DMA.h"
-#include "Debug_log.h"
+#include "hal/time_hw.h"
 #include <string.h>
 
 WS2812_class SYS_RGB;
@@ -32,7 +32,8 @@ void RGB_update()
 
     static uint32_t last = 0u;
 
-    uint32_t min_gap = time_hw_tpms;
+    /* 最小刷新间隔为 10ms (PR #134: throttle RGB to protect Bambu bus) */
+    uint32_t min_gap = time_hw_tpms * 10u;
     if (!min_gap) min_gap = 1u;
 
     const uint32_t now = time_ticks32();
@@ -186,7 +187,6 @@ int main(void)
     RGB_update();
     delay(50);
 
-    DEBUG_init();
     ams_init();
     Flash_saves_init();
 
@@ -221,8 +221,6 @@ int main(void)
     Motion_control_init();
     bambubus_init();
     bus_init();
-
-    DEBUG("START\n");
 
     while (1)
     {

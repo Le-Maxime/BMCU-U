@@ -3,7 +3,6 @@
 #include "ADC_DMA.h"
 #include "Flash_saves.h"
 #include "hal/time_hw.h"
-#include "Debug_log.h"
 #include "app_api.h"
 #include <math.h>
 
