@@ -6,7 +6,6 @@
 #include "app_api.h"
 #include "_bus_hardware.h"
 #include "crc_bus.h"
-#include "ams_online_detect_policy.h"
 
 /**
  * @brief AMS 编号到索引的映射表
@@ -58,7 +57,7 @@ static uint32_t bambubus_heartbeat_deadline = 0u;
  */
 void bambubus_heartbeat_seen_fast(void)
 {
-    bambubus_heartbeat_deadline = time_ticks32() + ms_to_ticks32(1000u);
+    bambubus_heartbeat_deadline = time_ticks32() + ms_to_ticks32(2500u);
 }
 
 /**
@@ -194,15 +193,8 @@ void bambubus_long_package_analysis(uint8_t *buf, int data_length, bambubus_long
 /** @brief 打印机发来的长帧数据包全局解析结果 */
 bambubus_long_packge_data printer_data_long;
 
-/** @brief 在线检测策略引擎状态 */
-static ams_online_detect::State g_online_detect_state = {};
-static inline ams_online_detect::Config get_online_detect_config(void)
-{
-    return {
-        .confirm_settle_ticks = ms_to_ticks32(3000u),
-        .service_silence_ticks = ms_to_ticks32(1500u),
-    };
-}
+static bool have_registered = false;
+static uint8_t online_detect_phase = 0u;
 static uint8_t online_detect_prefix_now = 0x0Cu;
 
 /**
@@ -213,7 +205,8 @@ static uint8_t online_detect_prefix_now = 0x0Cu;
  */
 static inline void online_detect_reset(void)
 {
-    ams_online_detect::reset(g_online_detect_state);
+    have_registered = false;
+    online_detect_phase = 0u;
     online_detect_prefix_now = 0x0Cu;
 }
 
@@ -1192,14 +1185,18 @@ void get_package_online_detect(unsigned char *buf, int length)
 
     if (buf[5] == 0x00) // 子类型 0x00：打印机检测阶段
     {
-        ams_online_detect::poll(g_online_detect_state, get_online_detect_config(), time_ticks32());
-        const ams_online_detect::QueryAction action = ams_online_detect::on_query(g_online_detect_state);
+        if (have_registered) return;
 
-        if (action == ams_online_detect::QueryAction::stay_silent)
-            return;
-
-        online_detect_prefix_now = (action == ams_online_detect::QueryAction::offer_first)
-            ? 0x0Cu : 0x0Au;
+        if (online_detect_phase == 0u)
+        {
+            online_detect_prefix_now = 0x0Cu;
+            online_detect_phase = 1u;
+        }
+        else
+        {
+            online_detect_prefix_now = 0x0Au;
+            online_detect_phase = 2u;
+        }
 
         online_detect_build_packet(ams_num, 0x00);
 
@@ -1219,7 +1216,8 @@ void get_package_online_detect(unsigned char *buf, int length)
     if (memcmp(online_detect_res + 7, buf + 7, 17) != 0)
         return;
 
-    ams_online_detect::latch_confirm(g_online_detect_state, time_ticks32());
+    have_registered = true;
+    online_detect_phase = 3u;
 
     uint8_t *out = bus_port_to_host.tx_build_buf();
     memcpy(out, online_detect_res, 29);
@@ -1676,7 +1674,6 @@ bambubus_package_type bambubus_run()
 
     static uint32_t last_hb_deadline = 0u;    // 上次处理的心跳截止时间
     const uint32_t now = time_ticks32();
-    ams_online_detect::poll(g_online_detect_state, get_online_detect_config(), now);
 
     int rx_len = 0;
     _bus_data_type t = _bus_data_type::none;
