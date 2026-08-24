@@ -196,10 +196,13 @@ bambubus_long_packge_data printer_data_long;
 
 /** @brief 在线检测策略引擎状态 */
 static ams_online_detect::State g_online_detect_state = {};
-static const ams_online_detect::Config g_online_detect_config = {
-    .confirm_settle_ticks = 3000u * time_hw_tpms,
-    .service_silence_ticks = 1500u * time_hw_tpms,
-};
+static inline ams_online_detect::Config get_online_detect_config(void)
+{
+    return {
+        .confirm_settle_ticks = ms_to_ticks32(3000u),
+        .service_silence_ticks = ms_to_ticks32(1500u),
+    };
+}
 static uint8_t online_detect_prefix_now = 0x0Cu;
 
 /**
@@ -1189,7 +1192,7 @@ void get_package_online_detect(unsigned char *buf, int length)
 
     if (buf[5] == 0x00) // 子类型 0x00：打印机检测阶段
     {
-        ams_online_detect::poll(g_online_detect_state, g_online_detect_config, time_ticks32());
+        ams_online_detect::poll(g_online_detect_state, get_online_detect_config(), time_ticks32());
         const ams_online_detect::QueryAction action = ams_online_detect::on_query(g_online_detect_state);
 
         if (action == ams_online_detect::QueryAction::stay_silent)
@@ -1673,6 +1676,7 @@ bambubus_package_type bambubus_run()
 
     static uint32_t last_hb_deadline = 0u;    // 上次处理的心跳截止时间
     const uint32_t now = time_ticks32();
+    ams_online_detect::poll(g_online_detect_state, get_online_detect_config(), now);
 
     int rx_len = 0;
     _bus_data_type t = _bus_data_type::none;
