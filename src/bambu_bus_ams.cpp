@@ -8,7 +8,6 @@
 #include "_bus_hardware.h"
 #include "crc_bus.h"
 #include "ams_online_detect_policy.h"
-#include "bmcu_link.h"
 
 /**
  * @brief AMS 编号到索引的映射表
@@ -214,7 +213,6 @@ static inline void online_detect_reset(void)
 {
     ams_online_detect::reset(g_online_detect_state);
     online_detect_prefix_now = 0x0Cu;
-    bmcu_link_ams_registration_reset();
 }
 
 /**
@@ -826,8 +824,6 @@ void get_package_motion(bambubus_printer_motion_package_struct *package_recv)
     const uint8_t ams_idx = bambubus_ams_map[fixed_ams_num];
     if (!ams[ams_idx].online) return; // AMS 未在线
 
-    bmcu_link_ams_service_frame(0u); // kServiceMotion
-
     _ams *ams_ptr = &ams[ams_idx];
     if (!set_motion(in.filamnet_channel, in.statu_flag, in.motion_flag, fixed_ams_num)) return;
 
@@ -1049,8 +1045,6 @@ void get_package_stu_motion(bambubus_printer_stu_motion_package_struct *package_
     const uint8_t ams_idx = bambubus_ams_map[fixed_ams_num];
     if (!ams[ams_idx].online) return;
 
-    bmcu_link_ams_service_frame(1u); // kServiceStuMotion
-
     _ams *ams_ptr = &ams[ams_idx];
 
     // 统计各通道的在线状态
@@ -1194,8 +1188,6 @@ void get_package_online_detect(unsigned char *buf, int length)
         return;
     }
 
-    bmcu_link_ams_registration_query();
-
     if (buf[5] == 0x00) // 子类型 0x00：打印机检测阶段
     {
         ams_online_detect::poll(g_online_detect_state, g_online_detect_config, time_ticks32());
@@ -1226,7 +1218,6 @@ void get_package_online_detect(unsigned char *buf, int length)
         return;
 
     ams_online_detect::latch_confirm(g_online_detect_state, time_ticks32());
-    bmcu_link_ams_registration_confirm();
 
     uint8_t *out = bus_port_to_host.tx_build_buf();
     memcpy(out, online_detect_res, 29);
@@ -1252,8 +1243,6 @@ void get_package_long_packge_MC_online(unsigned char *buf, int length)
     if (printer_data_long.data_length < 1u) return;
     if (!ams[bambubus_ams_map[fixed_ams_num]].online) return;
     if (printer_data_long.datas[0] != fixed_ams_num) return; // 验证 AMS 编号
-
-    bmcu_link_ams_service_frame(2u); // kServiceMcOnline
 
     // 构建回复数据：6 字节确认包
     unsigned char resp[6] = {fixed_ams_num, 0x00, 0x00, 0x00, 0x00, 0x00};
