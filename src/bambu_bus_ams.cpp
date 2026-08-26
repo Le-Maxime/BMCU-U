@@ -1483,7 +1483,7 @@ void get_package_long_packge_serial_number(unsigned char *buf, int length)
     bambubus_long_package_get(&data);
 }
 
-unsigned char long_packge_version_version_and_name_AMS08[] = {0x15, 0x08, 0x00, 0x00 , // version 00.00.08.15 (confirmed from real AMS Lite on A1 FW 1.08.01)
+unsigned char long_packge_version_version_and_name_AMS08[] = {0x57, 0x06, 0x00, 0x01 , // version 01.00.06.87 (BMCU-X, confirmed working on A1/A1Mini FW 01.08.01.00)
                                                               0x41, 0x4D, 0x53, 0x30, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 /**
