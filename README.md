@@ -3,13 +3,13 @@
 <div align="center">
 
 [![Fork](https://img.shields.io/badge/Forked%20from-jarczakpawel%2FBMCU--C--PJARCZAK-blue.svg)](https://github.com/jarczakpawel/BMCU-C-PJARCZAK)
-[![GitHub release](https://img.shields.io/github/v/release/Le-Maxime/Ultimate-BMCU?color=green)](https://github.com/Le-Maxime/Ultimate-BMCU/releases)
+[![GitHub release](https://img.shields.io/github/v/release/Le-Maxime/BMCU-U?color=green)](https://github.com/Le-Maxime/BMCU-U/releases)
 [![License](https://img.shields.io/badge/License-GPL%20v3-orange.svg)](LICENSE)
-[![PlatformIO](https://img.shields.io/badge/PlatformIO-Build%20Passing-brightgreen.svg)](https://github.com/Le-Maxime/Ultimate-BMCU/actions)
+[![PlatformIO](https://img.shields.io/badge/PlatformIO-Build%20Passing-brightgreen.svg)](https://github.com/Le-Maxime/BMCU-U/actions)
 
 **Единая ультимативная сборка прошивки для мультиколор-контроллеров BMCU (Tree Tribe v2.2 / DM / Standard) с поддержкой принтеров Bambu Lab A1, A1 Mini, P1S, X1C, P2S.**
 
-[**🌐 Онлайн-конфигуратор и скачивание прошивок**](https://raw.githack.com/Le-Maxime/Ultimate-BMCU/main/bmcu_configurator.html)
+[**🌐 Онлайн-конфигуратор и скачивание прошивок**](https://raw.githack.com/Le-Maxime/BMCU-U/main/bmcu_configurator.html)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 Для удобства выбора параметров создан интерактивный веб-конфигуратор:
 
-### 👉 [**Открыть Ultimate BMCU Configurator**](https://raw.githack.com/Le-Maxime/Ultimate-BMCU/main/bmcu_configurator.html)
+### 👉 [**Открыть Ultimate BMCU Configurator**](https://raw.githack.com/Le-Maxime/BMCU-U/main/bmcu_configurator.html)
 
 Конфигуратор позволяет в один клик:
 1. Выбрать тип платы (**DM с автозагрузкой** или **Стандартная**).
@@ -59,7 +59,7 @@
 
 ## 📦 Формат названий готовых файлов прошивок
 
-Все файлы автоматически компилируются через **GitHub Actions** и доступны в [**Releases**](https://github.com/Le-Maxime/Ultimate-BMCU/releases):
+Все файлы автоматически компилируются через **GitHub Actions** и доступны в [**Releases**](https://github.com/Le-Maxime/BMCU-U/releases):
 
 ```
 bmcu_{принтер}_{плата}_ams{слот}_{ретракт}mm[_soft][_rgb].bin
@@ -95,7 +95,7 @@ bmcu_{принтер}_{плата}_ams{слот}_{ретракт}mm[_soft][_rgb]
 
 ```bash
 # Клонирование репозитория
-git clone https://github.com/Le-Maxime/Ultimate-BMCU.git
+git clone https://github.com/Le-Maxime/BMCU-U.git
 cd Ultimate-BMCU
 
 # Пример сборки варианта под A1, плату DM, слот A, ретракт 95 мм:
