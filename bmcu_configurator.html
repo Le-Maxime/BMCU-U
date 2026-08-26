@@ -8,7 +8,7 @@
   :root {
     --bg: #0f1117; --card: #1a1d27; --card2: #20232f;
     --border: #2e3347; --accent: #4f8ef7; --accent2: #7c6ef7;
-    --green: #3ecf8e; --red: #f87171; --yellow: #fbbf24;
+    --green: #3ecf8e; --red: #f87171; --yellow: #fbbf24; --orange: #fb923c;
     --text: #e2e8f0; --muted: #8892a4; --radius: 12px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,9 +27,10 @@
   .toggle-btn .label { display: block; font-size: 0.88rem; font-weight: 500; }
   .toggle-btn .sub { display: block; font-size: 0.70rem; color: var(--muted); margin-top: 3px; }
   .toggle-btn:hover { border-color: var(--accent); color: var(--text); }
-  .toggle-btn.active { border-color: var(--green); background: rgba(62,207,142,0.08); color: var(--text); }
-  .toggle-btn.active.blue { border-color: var(--accent); background: rgba(79,142,247,0.10); }
-  .toggle-btn.active.purple { border-color: var(--accent2); background: rgba(124,110,247,0.10); }
+  .toggle-btn.active      { border-color: var(--green);   background: rgba(62,207,142,0.08); color: var(--text); }
+  .toggle-btn.active.blue { border-color: var(--accent);  background: rgba(79,142,247,0.10); }
+  .toggle-btn.active.pur  { border-color: var(--accent2); background: rgba(124,110,247,0.10); }
+  .toggle-btn.active.orn  { border-color: var(--orange);  background: rgba(251,146,60,0.10); }
 
   .slot-group { display: flex; gap: 10px; }
   .slot-btn { flex: 1; padding: 12px 6px; border-radius: 8px; border: 2px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; text-align: center; font-weight: 700; font-size: 1.1rem; transition: all 0.15s; user-select: none; }
@@ -49,38 +50,31 @@
   .custom-row input.active { border-color: var(--yellow); background: rgba(251,191,36,0.07); }
   .unit { color: var(--muted); font-size: 0.84rem; }
 
-  /* Repo settings */
   .repo-row { display: flex; align-items: center; gap: 10px; }
   .repo-row label { font-size: 0.84rem; color: var(--muted); white-space: nowrap; }
   .repo-row input { flex: 1; background: var(--card2); border: 2px solid var(--border); border-radius: 8px; color: var(--text); padding: 8px 12px; font-size: 0.85rem; outline: none; transition: border-color 0.14s; }
   .repo-row input:focus { border-color: var(--accent); }
 
-  /* Output */
   .output-card { background: #0d1117; border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin-top: 20px; }
   .output-card h2 { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
   .chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 20px; padding: 4px 12px; font-size: 0.76rem; border: 1px solid; }
-  .chip.g { background: rgba(62,207,142,.08); border-color: rgba(62,207,142,.25); color: var(--green); }
-  .chip.b { background: rgba(79,142,247,.08); border-color: rgba(79,142,247,.25); color: var(--accent); }
-  .chip.y { background: rgba(251,191,36,.08); border-color: rgba(251,191,36,.25); color: var(--yellow); }
+  .chip.g { background: rgba(62,207,142,.08);  border-color: rgba(62,207,142,.25);  color: var(--green); }
+  .chip.b { background: rgba(79,142,247,.08);  border-color: rgba(79,142,247,.25);  color: var(--accent); }
+  .chip.y { background: rgba(251,191,36,.08);  border-color: rgba(251,191,36,.25);  color: var(--yellow); }
   .chip.p { background: rgba(124,110,247,.08); border-color: rgba(124,110,247,.25); color: var(--accent2); }
+  .chip.o { background: rgba(251,146,60,.08);  border-color: rgba(251,146,60,.25);  color: var(--orange); }
+  .chip.r { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.25); color: var(--red); }
 
   .divider { height: 1px; background: var(--border); margin: 16px 0; }
 
-  /* Download button */
   .dl-wrap { margin-bottom: 16px; }
-  .dl-btn {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; padding: 16px 20px; border-radius: 10px; border: none;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    color: white; font-size: 1rem; font-weight: 700; cursor: pointer;
-    text-decoration: none; transition: opacity 0.15s; letter-spacing: 0.02em;
-  }
+  .dl-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 16px 20px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; font-size: 1rem; font-weight: 700; cursor: pointer; text-decoration: none; transition: opacity 0.15s; }
   .dl-btn:hover { opacity: 0.88; }
   .dl-btn.disabled { background: var(--card2); color: var(--muted); cursor: not-allowed; border: 2px dashed var(--border); }
   .dl-filename { font-size: 0.76rem; text-align: center; color: var(--muted); margin-top: 6px; font-family: monospace; }
-  .dl-warn { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.3); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: var(--yellow); margin-bottom: 14px; }
+  .dl-warn { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.3); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: var(--yellow); margin-bottom: 14px; line-height: 1.5; }
 
   .flags-block { background: #161b22; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; position: relative; }
   .flags-block .blabel { font-size: 0.70rem; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.05em; }
@@ -138,6 +132,36 @@
     <div class="toggle-btn" data-val="p1s" onclick="sel(this,'printer')">
       <span class="icon">🖨️</span><span class="label">P1S / X1 / P2S</span>
       <span class="sub">AMS шина</span>
+    </div>
+  </div>
+</div>
+
+<!-- Режим загрузки -->
+<div class="card">
+  <h2>Режим загрузки прутка</h2>
+  <div class="toggle-group" id="grp-load">
+    <div class="toggle-btn active" data-val="0" onclick="sel(this,'load')">
+      <span class="icon">🔩</span><span class="label">Hard Load</span>
+      <span class="sub">стандартный, быстрый</span>
+    </div>
+    <div class="toggle-btn" data-val="1" onclick="sel(this,'load')">
+      <span class="icon">🌸</span><span class="label">Soft Load</span>
+      <span class="sub">мягкая подача, для TPU</span>
+    </div>
+  </div>
+</div>
+
+<!-- RGB LEDs -->
+<div class="card">
+  <h2>RGB диоды — отображение цвета прутка</h2>
+  <div class="toggle-group" id="grp-rgb">
+    <div class="toggle-btn active" data-val="0" onclick="sel(this,'rgb')">
+      <span class="icon">⬜</span><span class="label">Стандартный</span>
+      <span class="sub">цвет статуса (белый/синий/...)</span>
+    </div>
+    <div class="toggle-btn" data-val="1" onclick="sel(this,'rgb')">
+      <span class="icon">🌈</span><span class="label">Цвет прутка</span>
+      <span class="sub">BMCU_ONLINE_LED_FILAMENT_RGB=1</span>
     </div>
   </div>
 </div>
@@ -212,16 +236,19 @@
 </div>
 
 <script>
+// Предсобранные комбинации: rgb=0 hard_load=0
+// rgb=1 или soft=1 -> только pio команда
 const PREBUILT_RETRACTS = ['0.050','0.070','0.080','0.095','0.100','0.120','0.150','0.200','0.300','0.500'];
 const AMS_LETTERS = ['a','b','c','d'];
 
-const st = { dm: 0, printer: 'a1', ams: 0, retract: '0.095', custom: false };
+const st = { dm:0, printer:'a1', load:0, rgb:0, ams:0, retract:'0.095', custom:false };
 
 function sel(el, key) {
   const grp = document.getElementById('grp-' + key);
   grp.querySelectorAll('.toggle-btn,.slot-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  st[key] = isNaN(el.dataset.val) ? el.dataset.val : parseInt(el.dataset.val);
+  const raw = el.dataset.val;
+  st[key] = isNaN(raw) ? raw : parseInt(raw);
   render();
 }
 
@@ -245,44 +272,60 @@ function onCustomR(input) {
 }
 
 function getFilename() {
-  const printer = st.printer;
-  const dm_str  = st.dm ? 'dm' : 'std';
+  const dm_str  = st.dm  ? 'dm'   : 'std';
   const ams_l   = AMS_LETTERS[st.ams];
+  const ld_str  = st.load ? '_soft' : '';
+  const rgb_str = st.rgb  ? '_rgb'  : '';
   const mm      = Math.round(parseFloat(st.retract) * 1000);
   const mm_str  = String(mm).padStart(4, '0');
-  return `bmcu_${printer}_${dm_str}_ams${ams_l}_${mm_str}mm.bin`;
+  return `bmcu_${st.printer}_${dm_str}_ams${ams_l}_${mm_str}mm${ld_str}${rgb_str}.bin`;
+}
+
+function isPrebuilt() {
+  // Pre-built: только hard load + rgb=0, стандартные значения ретракта
+  return !st.custom && st.load === 0 && st.rgb === 0 &&
+         PREBUILT_RETRACTS.includes(st.retract);
 }
 
 function getFlags() {
   const f = [];
-  f.push(['BAMBU_BUS_AMS_NUM', st.ams]);
-  f.push(['AMS_RETRACT_LEN', st.retract + 'f']);
-  if (st.dm)           f.push(['BMCU_DM_TWO_MICROSWITCH', 1]);
-  if (st.printer === 'p1s') f.push(['BMCU_P1S', 1]);
+  f.push(['BAMBU_BUS_AMS_NUM',         st.ams]);
+  f.push(['AMS_RETRACT_LEN',           st.retract + 'f']);
+  if (st.dm)             f.push(['BMCU_DM_TWO_MICROSWITCH',    1]);
+  if (st.printer==='p1s') f.push(['BMCU_P1S',                  1]);
+  if (st.load)           f.push(['BMCU_SOFT_LOAD',             1]);
+  if (st.rgb)            f.push(['BMCU_ONLINE_LED_FILAMENT_RGB',1]);
   return f;
 }
 
 function render() {
-  const flags = getFlags();
+  const flags    = getFlags();
   const filename = getFilename();
-  const repo = document.getElementById('repo-url').value.trim() || 'owner/repo';
-  const isPrebuilt = !st.custom;
+  const repo     = document.getElementById('repo-url').value.trim() || 'owner/repo';
+  const prebuilt = isPrebuilt();
 
   // Chips
   const slotNames = ['A (первый)','B (второй)','C (третий)','D (четвёртый)'];
   document.getElementById('chips').innerHTML = [
-    `<span class="chip ${st.dm?'b':'g'}">${st.dm?'⚡ DM':'🔧 Стандартная'}</span>`,
-    `<span class="chip g">${st.printer === 'a1' ? '🖨️ A1/A1 Mini' : '🖨️ P1S/X1/P2S'}</span>`,
+    `<span class="chip ${st.dm ? 'b':'g'}">${st.dm ? '⚡ DM':'🔧 Стандартная'}</span>`,
+    `<span class="chip g">${st.printer==='a1' ? '🖨️ A1/A1 Mini':'🖨️ P1S/X1/P2S'}</span>`,
+    `<span class="chip ${st.load ? 'o':'g'}">${st.load ? '🌸 Soft Load':'🔩 Hard Load'}</span>`,
+    `<span class="chip ${st.rgb ? 'o':'g'}">${st.rgb ? '🌈 RGB цвет прутка':'⬜ RGB стандарт'}</span>`,
     `<span class="chip p">📦 Слот ${slotNames[st.ams]}</span>`,
     `<span class="chip y">↩️ Ретракт ${Math.round(parseFloat(st.retract)*1000)} мм</span>`,
   ].join('');
 
   // Download
-  const dlBtn = document.getElementById('dl-btn');
+  const dlBtn  = document.getElementById('dl-btn');
   const dlWarn = document.getElementById('dl-warn');
   const dlName = document.getElementById('dl-name');
 
-  if (isPrebuilt) {
+  let warnParts = [];
+  if (st.custom)  warnParts.push('нестандартный ретракт');
+  if (st.load)    warnParts.push('Soft Load');
+  if (st.rgb)     warnParts.push('RGB цвет прутка');
+
+  if (prebuilt) {
     const url = `https://github.com/${repo}/releases/latest/download/${filename}`;
     dlBtn.href = url;
     dlBtn.classList.remove('disabled');
@@ -292,13 +335,11 @@ function render() {
     dlBtn.href = '#';
     dlBtn.classList.add('disabled');
     dlWarn.style.display = 'block';
-    dlWarn.textContent = `⚠ Значение ${st.retract} м не входит в список предсобранных вариантов. Используй команду ниже для ручной сборки.`;
+    dlWarn.innerHTML = `⚠ Выбран вариант (<b>${warnParts.join(', ')}</b>), который не входит в предсобранные бинарники.<br>Используй команду ниже для ручной сборки.`;
     dlName.textContent = '';
   }
 
-  // PIO command (text)
-  const flagsText = flags.map(([k,v]) => `--build-flag=-D${k}=${v}`).join(' \\\n  ');
-  const pioText = `pio run -e base \\\n  ${flagsText}`;
+  // PIO command
   document.getElementById('pio-cmd').innerHTML =
     `<span class="fb">pio run -e base</span> \\\n  ` +
     flags.map(([k,v]) => `<span class="fk">--build-flag=-D${k}</span>=<span class="fv">${v}</span>`).join(' \\\n  ');
@@ -309,16 +350,16 @@ function render() {
 }
 
 function checkDl(e) {
-  const dlBtn = document.getElementById('dl-btn');
-  if (dlBtn.classList.contains('disabled')) { e.preventDefault(); return false; }
+  if (document.getElementById('dl-btn').classList.contains('disabled')) {
+    e.preventDefault(); return false;
+  }
   return true;
 }
 
 function doCopy(id, btn) {
-  const text = document.getElementById(id).innerText;
-  navigator.clipboard.writeText(text).then(() => {
+  navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => {
     btn.textContent = '✓ ok'; btn.classList.add('ok');
-    setTimeout(() => { btn.textContent = 'копировать'; btn.classList.remove('ok'); }, 2000);
+    setTimeout(() => { btn.textContent='копировать'; btn.classList.remove('ok'); }, 2000);
   });
 }
 
