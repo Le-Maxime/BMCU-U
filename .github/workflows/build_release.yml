@@ -1,0 +1,117 @@
+name: Build & Release BMCU Firmware
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: true
+        default: 'latest'
+      prerelease:
+        description: 'Mark as pre-release?'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+          restore-keys: pio-${{ runner.os }}-
+
+      - name: Build all firmware variants
+        run: |
+          mkdir -p dist
+          PRINTERS="a1 p1s"
+          DM_MODES="0 1"
+          AMS_SLOTS="0 1 2 3"
+          RETRACTS="0.050 0.070 0.080 0.095 0.100 0.120 0.150 0.200 0.300 0.500"
+          AMS_LETTERS=(a b c d)
+          TOTAL=0; FAILED=0
+          for printer in $PRINTERS; do
+            for dm in $DM_MODES; do
+              for ams in $AMS_SLOTS; do
+                for retract in $RETRACTS; do
+                  dm_str="std"; [ "$dm" = "1" ] && dm_str="dm"
+                  ams_letter="${AMS_LETTERS[$ams]}"
+                  retract_mm=$(python3 -c "print(int(round(${retract} * 1000)))")
+                  retract_str=$(printf "%04d" "$retract_mm")
+                  NAME="bmcu_${printer}_${dm_str}_ams${ams_letter}_${retract_str}mm"
+                  echo "==> Building $NAME ..."
+                  export BMCU_DM_TWO_MICROSWITCH="$dm"
+                  export BMCU_P1S=0; [ "$printer" = "p1s" ] && export BMCU_P1S=1
+                  export BMCU_SOFT_LOAD=0
+                  export BMCU_ONLINE_LED_FILAMENT_RGB=0
+                  export BAMBU_BUS_AMS_NUM="$ams"
+                  export AMS_RETRACT_LEN="${retract}f"
+                  if pio run -e fw --silent; then
+                    cp .pio/build/fw/firmware.bin "dist/${NAME}.bin"
+                    echo "  OK: dist/${NAME}.bin"
+                    TOTAL=$((TOTAL+1))
+                  else
+                    echo "  FAILED: $NAME" >&2
+                    FAILED=$((FAILED+1))
+                  fi
+                done
+              done
+            done
+          done
+          echo "Done: Built=$TOTAL Failed=$FAILED"
+          ls -1 dist/ | wc -l
+          [ "$FAILED" -gt 0 ] && exit 1 || true
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "BMCU Firmware ${{ steps.tag.outputs.tag }}"
+          prerelease: ${{ inputs.prerelease == 'true' }}
+          body: |
+            ## BMCU Firmware — все варианты
+
+            Используй **[BMCU Configurator](https://raw.githack.com/${{ github.repository }}/main/bmcu_configurator.html)** для выбора нужного файла.
+
+            ### Формат имени файла:
+            `bmcu_{принтер}_{плата}_ams{слот}_{ретракт}mm.bin`
+
+            | Часть | Значение |
+            |-------|----------|
+            | `a1` | A1 / A1 Mini |
+            | `p1s` | P1S / X1 / P2S / H2D |
+            | `std` | Стандартная плата (одиночный концевик) |
+            | `dm` | DM плата (двойной концевик + автозагрузка) |
+            | `amsa`..`amsd` | Слот AMS (a=первый, b=второй...) |
+            | `0095mm` | Длина ретракта 95 мм (= 9.5 см) |
+
+            **Пример:** `bmcu_a1_dm_amsa_0095mm.bin` = A1 Mini, DM плата, слот A, ретракт 95 мм
+          files: dist/*.bin
