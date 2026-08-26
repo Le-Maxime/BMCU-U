@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BMCU Firmware Configurator</title>
+<title>Ultimate BMCU Firmware Configurator</title>
 <style>
   :root {
     --bg: #0f1117; --card: #1a1d27; --card2: #20232f;
@@ -12,20 +12,20 @@
     --text: #e2e8f0; --muted: #8892a4; --radius: 12px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; padding: 24px 16px 60px; }
-  .container { max-width: 780px; margin: 0 auto; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; padding: 28px 16px 60px; }
+  .container { max-width: 760px; margin: 0 auto; }
   header { text-align: center; margin-bottom: 32px; }
-  header h1 { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  header h1 { font-size: 2.2rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
   header p { color: var(--muted); margin-top: 8px; font-size: 0.95rem; }
 
   .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin-bottom: 14px; }
   .card h2 { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
 
   .toggle-group { display: flex; gap: 10px; flex-wrap: wrap; }
-  .toggle-btn { flex: 1; min-width: 120px; padding: 14px 10px; border-radius: 10px; border: 2px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; text-align: center; transition: all 0.16s; user-select: none; }
-  .toggle-btn .icon { font-size: 1.5rem; display: block; margin-bottom: 5px; }
-  .toggle-btn .label { display: block; font-size: 0.88rem; font-weight: 500; }
-  .toggle-btn .sub { display: block; font-size: 0.70rem; color: var(--muted); margin-top: 3px; }
+  .toggle-btn { flex: 1; min-width: 130px; padding: 15px 12px; border-radius: 10px; border: 2px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; text-align: center; transition: all 0.16s; user-select: none; }
+  .toggle-btn .icon { font-size: 1.5rem; display: block; margin-bottom: 6px; }
+  .toggle-btn .label { display: block; font-size: 0.92rem; font-weight: 600; }
+  .toggle-btn .sub { display: block; font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
   .toggle-btn:hover { border-color: var(--accent); color: var(--text); }
   .toggle-btn.active      { border-color: var(--green);   background: rgba(62,207,142,0.08); color: var(--text); }
   .toggle-btn.active.blue { border-color: var(--accent);  background: rgba(79,142,247,0.10); }
@@ -33,112 +33,79 @@
   .toggle-btn.active.orn  { border-color: var(--orange);  background: rgba(251,146,60,0.10); }
 
   .slot-group { display: flex; gap: 10px; }
-  .slot-btn { flex: 1; padding: 12px 6px; border-radius: 8px; border: 2px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; text-align: center; font-weight: 700; font-size: 1.1rem; transition: all 0.15s; user-select: none; }
-  .slot-btn .slot-sub { display: block; font-size: 0.68rem; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  .slot-btn { flex: 1; padding: 14px 6px; border-radius: 8px; border: 2px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; text-align: center; font-weight: 700; font-size: 1.15rem; transition: all 0.15s; user-select: none; }
+  .slot-btn .slot-sub { display: block; font-size: 0.70rem; font-weight: 400; color: var(--muted); margin-top: 2px; }
   .slot-btn:hover { border-color: var(--accent2); color: var(--text); }
   .slot-btn.active { border-color: var(--accent2); background: rgba(124,110,247,0.12); color: var(--accent2); }
 
-  .retract-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; margin-bottom: 14px; }
-  .retract-btn { padding: 10px 4px; border-radius: 8px; border: 2px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; text-align: center; font-size: 0.80rem; font-weight: 600; transition: all 0.14s; user-select: none; }
+  .retract-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+  .retract-btn { padding: 11px 4px; border-radius: 8px; border: 2px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; text-align: center; font-size: 0.84rem; font-weight: 600; transition: all 0.14s; user-select: none; }
   .retract-btn:hover { border-color: var(--yellow); color: var(--text); }
   .retract-btn.active { border-color: var(--yellow); background: rgba(251,191,36,0.10); color: var(--yellow); }
-  .custom-row { display: flex; align-items: center; gap: 10px; }
-  .custom-row label { font-size: 0.84rem; color: var(--muted); white-space: nowrap; }
-  .custom-row input { flex: 1; background: var(--card2); border: 2px solid var(--border); border-radius: 8px; color: var(--text); padding: 8px 12px; font-size: 0.9rem; outline: none; transition: border-color 0.14s; -moz-appearance: textfield; }
-  .custom-row input::-webkit-outer-spin-button, .custom-row input::-webkit-inner-spin-button { -webkit-appearance: none; }
-  .custom-row input:focus { border-color: var(--yellow); }
-  .custom-row input.active { border-color: var(--yellow); background: rgba(251,191,36,0.07); }
-  .unit { color: var(--muted); font-size: 0.84rem; }
 
-  .repo-row { display: flex; align-items: center; gap: 10px; }
-  .repo-row label { font-size: 0.84rem; color: var(--muted); white-space: nowrap; }
-  .repo-row input { flex: 1; background: var(--card2); border: 2px solid var(--border); border-radius: 8px; color: var(--text); padding: 8px 12px; font-size: 0.85rem; outline: none; transition: border-color 0.14s; }
-  .repo-row input:focus { border-color: var(--accent); }
-
-  .output-card { background: #0d1117; border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin-top: 20px; }
+  .output-card { background: #0d1117; border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-top: 22px; }
   .output-card h2 { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
 
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-  .chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 20px; padding: 4px 12px; font-size: 0.76rem; border: 1px solid; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 20px; padding: 5px 14px; font-size: 0.80rem; border: 1px solid; font-weight: 500; }
   .chip.g { background: rgba(62,207,142,.08);  border-color: rgba(62,207,142,.25);  color: var(--green); }
   .chip.b { background: rgba(79,142,247,.08);  border-color: rgba(79,142,247,.25);  color: var(--accent); }
   .chip.y { background: rgba(251,191,36,.08);  border-color: rgba(251,191,36,.25);  color: var(--yellow); }
   .chip.p { background: rgba(124,110,247,.08); border-color: rgba(124,110,247,.25); color: var(--accent2); }
   .chip.o { background: rgba(251,146,60,.08);  border-color: rgba(251,146,60,.25);  color: var(--orange); }
-  .chip.r { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.25); color: var(--red); }
 
-  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .dl-wrap { margin-top: 6px; }
+  .dl-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 18px 24px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; font-size: 1.05rem; font-weight: 700; cursor: pointer; text-decoration: none; transition: all 0.18s; box-shadow: 0 4px 18px rgba(79,142,247,0.25); }
+  .dl-btn:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 22px rgba(79,142,247,0.35); }
+  .dl-filename { font-size: 0.82rem; text-align: center; color: var(--muted); margin-top: 10px; font-family: 'Cascadia Code', Consolas, monospace; background: #161b22; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); display: inline-block; }
+  .dl-center { text-align: center; }
 
-  .dl-wrap { margin-bottom: 16px; }
-  .dl-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 16px 20px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; font-size: 1rem; font-weight: 700; cursor: pointer; text-decoration: none; transition: opacity 0.15s; }
-  .dl-btn:hover { opacity: 0.88; }
-  .dl-btn.disabled { background: var(--card2); color: var(--muted); cursor: not-allowed; border: 2px dashed var(--border); }
-  .dl-filename { font-size: 0.76rem; text-align: center; color: var(--muted); margin-top: 6px; font-family: monospace; }
-  .dl-warn { background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.3); border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: var(--yellow); margin-bottom: 14px; line-height: 1.5; }
-
-  .flags-block { background: #161b22; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; position: relative; }
-  .flags-block .blabel { font-size: 0.70rem; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.05em; }
-  .flags-block code { font-family: 'Cascadia Code','Fira Code',Consolas,monospace; font-size: 0.83rem; word-break: break-all; white-space: pre-wrap; line-height: 1.8; display: block; }
-  .fk { color: var(--accent); } .fv { color: var(--yellow); } .fb { color: #e2e8f0; }
-  .copy-btn { position: absolute; top: 10px; right: 10px; background: var(--card2); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); padding: 5px 10px; font-size: 0.73rem; cursor: pointer; transition: all 0.14s; }
-  .copy-btn:hover { color: var(--text); border-color: var(--accent); }
-  .copy-btn.ok { color: var(--green); border-color: var(--green); }
-
-  footer { text-align: center; color: var(--muted); font-size: 0.76rem; margin-top: 28px; }
+  footer { text-align: center; color: var(--muted); font-size: 0.80rem; margin-top: 32px; }
   footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
 <div class="container">
 
 <header>
-  <h1>🛠 BMCU Firmware Configurator</h1>
-  <p>Выбери параметры и скачай готовую прошивку прямо с GitHub</p>
+  <h1>Ultimate BMCU Configurator</h1>
+  <p>Выберите конфигурацию и скачайте готовую прошивку для вашего устройства</p>
 </header>
-
-<!-- GitHub repo -->
-<div class="card">
-  <h2>GitHub репозиторий (для скачивания прошивки)</h2>
-  <div class="repo-row">
-    <label>Репо:</label>
-    <input type="text" id="repo-url" value="jarczakpawel/BMCU-C-PJARCZAK"
-           placeholder="owner/repo" oninput="render()">
-  </div>
-</div>
 
 <!-- Тип платы -->
 <div class="card">
-  <h2>Тип платы BMCU</h2>
+  <h2>1. Тип платы BMCU</h2>
   <div class="toggle-group" id="grp-dm">
-    <div class="toggle-btn active" data-val="0" onclick="sel(this,'dm')">
-      <span class="icon">🔧</span><span class="label">Стандартная</span>
-      <span class="sub">одиночный концевик</span>
-    </div>
-    <div class="toggle-btn" data-val="1" onclick="sel(this,'dm')">
+    <div class="toggle-btn active" data-val="1" onclick="sel(this,'dm')">
       <span class="icon">⚡</span><span class="label">DM версия</span>
       <span class="sub">двойной концевик + автозагрузка</span>
+    </div>
+    <div class="toggle-btn" data-val="0" onclick="sel(this,'dm')">
+      <span class="icon">🔧</span><span class="label">Стандартная</span>
+      <span class="sub">одиночный концевик</span>
     </div>
   </div>
 </div>
 
 <!-- Принтер -->
 <div class="card">
-  <h2>Модель принтера</h2>
+  <h2>2. Модель принтера</h2>
   <div class="toggle-group" id="grp-printer">
     <div class="toggle-btn active" data-val="a1" onclick="sel(this,'printer')">
       <span class="icon">🖨️</span><span class="label">A1 / A1 Mini</span>
-      <span class="sub">AMS Lite шина</span>
+      <span class="sub">Bambu Lab A-серия</span>
     </div>
     <div class="toggle-btn" data-val="p1s" onclick="sel(this,'printer')">
-      <span class="icon">🖨️</span><span class="label">P1S / X1 / P2S</span>
-      <span class="sub">AMS шина</span>
+      <span class="icon">🖨️</span><span class="label">P1 / X1 / P2</span>
+      <span class="sub">Bambu Lab P/X-серия</span>
     </div>
   </div>
 </div>
 
 <!-- Режим загрузки -->
 <div class="card">
-  <h2>Режим загрузки прутка</h2>
+  <h2>3. Режим загрузки прутка</h2>
   <div class="toggle-group" id="grp-load">
     <div class="toggle-btn active" data-val="0" onclick="sel(this,'load')">
       <span class="icon">🔩</span><span class="label">Hard Load</span>
@@ -146,40 +113,40 @@
     </div>
     <div class="toggle-btn" data-val="1" onclick="sel(this,'load')">
       <span class="icon">🌸</span><span class="label">Soft Load</span>
-      <span class="sub">мягкая подача, для TPU</span>
+      <span class="sub">мягкая подача для TPU</span>
     </div>
   </div>
 </div>
 
-<!-- RGB LEDs -->
+<!-- RGB диоды -->
 <div class="card">
-  <h2>RGB диоды — отображение цвета прутка</h2>
+  <h2>4. RGB светодиоды</h2>
   <div class="toggle-group" id="grp-rgb">
     <div class="toggle-btn active" data-val="0" onclick="sel(this,'rgb')">
       <span class="icon">⬜</span><span class="label">Стандартный</span>
-      <span class="sub">цвет статуса (белый/синий/...)</span>
+      <span class="sub">индикация статуса слота</span>
     </div>
     <div class="toggle-btn" data-val="1" onclick="sel(this,'rgb')">
-      <span class="icon">🌈</span><span class="label">Цвет прутка</span>
-      <span class="sub">BMCU_ONLINE_LED_FILAMENT_RGB=1</span>
+      <span class="icon">🌈</span><span class="label">Цвет филамента</span>
+      <span class="sub">подсветка цвета прутка из слайсера</span>
     </div>
   </div>
 </div>
 
 <!-- Слот AMS -->
 <div class="card">
-  <h2>Слот AMS (BAMBU_BUS_AMS_NUM)</h2>
+  <h2>5. Номер слота AMS</h2>
   <div class="slot-group" id="grp-ams">
-    <div class="slot-btn active" data-val="0" onclick="sel(this,'ams')">A<span class="slot-sub">первый</span></div>
-    <div class="slot-btn" data-val="1" onclick="sel(this,'ams')">B<span class="slot-sub">второй</span></div>
-    <div class="slot-btn" data-val="2" onclick="sel(this,'ams')">C<span class="slot-sub">третий</span></div>
-    <div class="slot-btn" data-val="3" onclick="sel(this,'ams')">D<span class="slot-sub">четвёртый</span></div>
+    <div class="slot-btn active" data-val="0" onclick="sel(this,'ams')">A<span class="slot-sub">слот 1 (основной)</span></div>
+    <div class="slot-btn" data-val="1" onclick="sel(this,'ams')">B<span class="slot-sub">слот 2</span></div>
+    <div class="slot-btn" data-val="2" onclick="sel(this,'ams')">C<span class="slot-sub">слот 3</span></div>
+    <div class="slot-btn" data-val="3" onclick="sel(this,'ams')">D<span class="slot-sub">слот 4</span></div>
   </div>
 </div>
 
 <!-- Длина ретракта -->
 <div class="card">
-  <h2>Длина ретракта</h2>
+  <h2>6. Длина отката прутка (ретракт)</h2>
   <div class="retract-grid">
     <div class="retract-btn" data-val="0.050" onclick="selR('0.050',this)">50 мм</div>
     <div class="retract-btn" data-val="0.070" onclick="selR('0.070',this)">70 мм</div>
@@ -192,56 +159,33 @@
     <div class="retract-btn" data-val="0.300" onclick="selR('0.300',this)">300 мм</div>
     <div class="retract-btn" data-val="0.500" onclick="selR('0.500',this)">500 мм</div>
   </div>
-  <div class="custom-row">
-    <label>Своё:</label>
-    <input type="number" id="custom-r" min="0.01" max="2.00" step="0.005"
-           placeholder="напр. 0.125" oninput="onCustomR(this)">
-    <span class="unit">м</span>
-  </div>
 </div>
 
-<!-- Вывод -->
+<!-- Вывод и скачивание -->
 <div class="output-card">
-  <h2>Итоговая конфигурация</h2>
+  <h2>Выбранная конфигурация</h2>
   <div class="chips" id="chips"></div>
-  <div class="divider"></div>
 
   <div class="dl-wrap">
-    <div id="dl-warn" class="dl-warn" style="display:none"></div>
-    <a id="dl-btn" class="dl-btn" href="#" target="_blank" onclick="return checkDl(event)">
-      ⬇ Скачать прошивку с GitHub
+    <a id="dl-btn" class="dl-btn" href="#" target="_blank">
+      ⬇ Скачать прошивку .bin с GitHub Releases
     </a>
-    <div class="dl-filename" id="dl-name"></div>
-  </div>
-
-  <div class="divider"></div>
-
-  <div class="flags-block">
-    <div class="blabel">КОМАНДА СБОРКИ (PlatformIO CLI)</div>
-    <code id="pio-cmd"></code>
-    <button class="copy-btn" onclick="doCopy('pio-cmd',this)">копировать</button>
-  </div>
-
-  <div class="flags-block">
-    <div class="blabel">BUILD FLAGS для platformio.ini</div>
-    <code id="flags-out"></code>
-    <button class="copy-btn" onclick="doCopy('flags-out',this)">копировать</button>
+    <div class="dl-center">
+      <div class="dl-filename" id="dl-name"></div>
+    </div>
   </div>
 </div>
 
 <footer>
-  Репозиторий: <a href="https://github.com/jarczakpawel/BMCU-C-PJARCZAK" target="_blank">jarczakpawel/BMCU-C-PJARCZAK</a>
-  &nbsp;·&nbsp; BMCU-X: <a href="https://github.com/JustablockCode/BMCU-X" target="_blank">JustablockCode/BMCU-X</a>
+  Репозиторий: <a href="https://github.com/Le-Maxime/Ultimate-BMCU" target="_blank">Le-Maxime/Ultimate-BMCU</a>
 </footer>
 </div>
 
 <script>
-// Предсобранные комбинации: rgb=0 hard_load=0
-// rgb=1 или soft=1 -> только pio команда
-const PREBUILT_RETRACTS = ['0.050','0.070','0.080','0.095','0.100','0.120','0.150','0.200','0.300','0.500'];
+const REPO = 'Le-Maxime/Ultimate-BMCU';
 const AMS_LETTERS = ['a','b','c','d'];
 
-const st = { dm:0, printer:'a1', load:0, rgb:0, ams:0, retract:'0.095', custom:false };
+const st = { dm: 1, printer: 'a1', load: 0, rgb: 0, ams: 0, retract: '0.095' };
 
 function sel(el, key) {
   const grp = document.getElementById('grp-' + key);
@@ -255,20 +199,8 @@ function sel(el, key) {
 function selR(val, el) {
   document.querySelectorAll('.retract-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('custom-r').value = '';
-  document.getElementById('custom-r').classList.remove('active');
-  st.retract = val; st.custom = false;
+  st.retract = val;
   render();
-}
-
-function onCustomR(input) {
-  const v = parseFloat(input.value);
-  if (!isNaN(v) && v > 0 && v <= 2.0) {
-    document.querySelectorAll('.retract-btn').forEach(b => b.classList.remove('active'));
-    input.classList.add('active');
-    st.retract = v.toFixed(3); st.custom = true;
-    render();
-  }
 }
 
 function getFilename() {
@@ -281,86 +213,25 @@ function getFilename() {
   return `bmcu_${st.printer}_${dm_str}_ams${ams_l}_${mm_str}mm${ld_str}${rgb_str}.bin`;
 }
 
-function isPrebuilt() {
-  // Pre-built: только hard load + rgb=0, стандартные значения ретракта
-  return !st.custom && st.load === 0 && st.rgb === 0 &&
-         PREBUILT_RETRACTS.includes(st.retract);
-}
-
-function getFlags() {
-  const f = [];
-  f.push(['BAMBU_BUS_AMS_NUM',         st.ams]);
-  f.push(['AMS_RETRACT_LEN',           st.retract + 'f']);
-  if (st.dm)             f.push(['BMCU_DM_TWO_MICROSWITCH',    1]);
-  if (st.printer==='p1s') f.push(['BMCU_P1S',                  1]);
-  if (st.load)           f.push(['BMCU_SOFT_LOAD',             1]);
-  if (st.rgb)            f.push(['BMCU_ONLINE_LED_FILAMENT_RGB',1]);
-  return f;
-}
-
 function render() {
-  const flags    = getFlags();
   const filename = getFilename();
-  const repo     = document.getElementById('repo-url').value.trim() || 'owner/repo';
-  const prebuilt = isPrebuilt();
 
   // Chips
-  const slotNames = ['A (первый)','B (второй)','C (третий)','D (четвёртый)'];
+  const slotNames = ['A (слот 1)','B (слот 2)','C (слот 3)','D (слот 4)'];
   document.getElementById('chips').innerHTML = [
-    `<span class="chip ${st.dm ? 'b':'g'}">${st.dm ? '⚡ DM':'🔧 Стандартная'}</span>`,
-    `<span class="chip g">${st.printer==='a1' ? '🖨️ A1/A1 Mini':'🖨️ P1S/X1/P2S'}</span>`,
+    `<span class="chip ${st.dm ? 'b':'g'}">${st.dm ? '⚡ DM версия':'🔧 Стандартная'}</span>`,
+    `<span class="chip g">${st.printer==='a1' ? '🖨️ A1 / A1 Mini':'🖨️ P1 / X1 / P2'}</span>`,
     `<span class="chip ${st.load ? 'o':'g'}">${st.load ? '🌸 Soft Load':'🔩 Hard Load'}</span>`,
-    `<span class="chip ${st.rgb ? 'o':'g'}">${st.rgb ? '🌈 RGB цвет прутка':'⬜ RGB стандарт'}</span>`,
-    `<span class="chip p">📦 Слот ${slotNames[st.ams]}</span>`,
+    `<span class="chip ${st.rgb ? 'o':'g'}">${st.rgb ? '🌈 Цвет филамента':'⬜ Стандартный RGB'}</span>`,
+    `<span class="chip p">📦 AMS ${slotNames[st.ams]}</span>`,
     `<span class="chip y">↩️ Ретракт ${Math.round(parseFloat(st.retract)*1000)} мм</span>`,
   ].join('');
 
-  // Download
-  const dlBtn  = document.getElementById('dl-btn');
-  const dlWarn = document.getElementById('dl-warn');
-  const dlName = document.getElementById('dl-name');
-
-  let warnParts = [];
-  if (st.custom)  warnParts.push('нестандартный ретракт');
-  if (st.load)    warnParts.push('Soft Load');
-  if (st.rgb)     warnParts.push('RGB цвет прутка');
-
-  if (prebuilt) {
-    const url = `https://github.com/${repo}/releases/latest/download/${filename}`;
-    dlBtn.href = url;
-    dlBtn.classList.remove('disabled');
-    dlWarn.style.display = 'none';
-    dlName.textContent = filename;
-  } else {
-    dlBtn.href = '#';
-    dlBtn.classList.add('disabled');
-    dlWarn.style.display = 'block';
-    dlWarn.innerHTML = `⚠ Выбран вариант (<b>${warnParts.join(', ')}</b>), который не входит в предсобранные бинарники.<br>Используй команду ниже для ручной сборки.`;
-    dlName.textContent = '';
-  }
-
-  // PIO command
-  document.getElementById('pio-cmd').innerHTML =
-    `<span class="fb">pio run -e base</span> \\\n  ` +
-    flags.map(([k,v]) => `<span class="fk">--build-flag=-D${k}</span>=<span class="fv">${v}</span>`).join(' \\\n  ');
-
-  // flags ini
-  document.getElementById('flags-out').innerHTML =
-    flags.map(([k,v]) => `<span class="fk">-D${k}</span>=<span class="fv">${v}</span>`).join('\n');
-}
-
-function checkDl(e) {
-  if (document.getElementById('dl-btn').classList.contains('disabled')) {
-    e.preventDefault(); return false;
-  }
-  return true;
-}
-
-function doCopy(id, btn) {
-  navigator.clipboard.writeText(document.getElementById(id).innerText).then(() => {
-    btn.textContent = '✓ ok'; btn.classList.add('ok');
-    setTimeout(() => { btn.textContent='копировать'; btn.classList.remove('ok'); }, 2000);
-  });
+  // Download URL
+  const url = `https://github.com/${REPO}/releases/latest/download/${filename}`;
+  const dlBtn = document.getElementById('dl-btn');
+  dlBtn.href = url;
+  document.getElementById('dl-name').textContent = filename;
 }
 
 render();
