@@ -9,7 +9,7 @@
 
 **Единая ультимативная сборка прошивки для мультиколор-контроллеров BMCU (Tree Tribe v2.2 / DM / Standard) с поддержкой принтеров Bambu Lab A1, A1 Mini, P1S, X1C, P2S.**
 
-[**🌐 Онлайн-конфигуратор и скачивание прошивок**](https://raw.githack.com/Le-Maxime/BMCU-U/main/bmcu_configurator.html)
+[**🌐 Онлайн-конфигуратор и скачивание прошивок**](https://le-maxime.github.io/BMCU-U/)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 Для удобства выбора параметров создан интерактивный веб-конфигуратор:
 
-### 👉 [**Открыть Ultimate BMCU Configurator**](https://raw.githack.com/Le-Maxime/BMCU-U/main/bmcu_configurator.html)
+### 👉 [**Открыть Ultimate BMCU Configurator**](https://le-maxime.github.io/BMCU-U/)
 
 Конфигуратор позволяет в один клик:
 1. Выбрать тип платы (**DM с автозагрузкой** или **Стандартная**).
